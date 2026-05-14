@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: dim_mlb_players
+    description: "Player dimension combining batters and pitchers"
+    columns:
+      - name: player_id_fg
+        description: "FanGraphs player ID"
+        tests:
+          - not_null
+      - name: player_name
+        tests:
+          - not_null
+      - name: season
+        tests:
+          - not_null
+
+  - name: fct_mlb_batting_season
+    description: "Season-level batting statistics"
+    columns:
+      - name: player_id_fg
+        tests:
+          - not_null
+      - name: season
+        tests:
+          - not_null
+      - name: plate_appearances
+        tests:
+          - not_null
+
+  - name: fct_mlb_pitching_season
+    description: "Season-level pitching statistics"
+    columns:
+      - name: player_id_fg
+        tests:
+          - not_null
+      - name: season
+        tests:
+          - not_null
+      - name: innings_pitched
+        tests:
+          - not_null

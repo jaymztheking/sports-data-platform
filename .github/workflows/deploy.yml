@@ -1,0 +1,75 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - "docker/**"
+
+jobs:
+  build-images:
+    runs-on: self-hosted
+    strategy:
+      matrix:
+        image:
+          - name: airflow
+            context: .
+            dockerfile: docker/airflow/Dockerfile
+          - name: spark
+            context: .
+            dockerfile: docker/spark/Dockerfile
+          - name: mlflow
+            context: .
+            dockerfile: docker/mlflow/Dockerfile
+          - name: ingestion
+            context: .
+            dockerfile: docker/ingestion/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.image.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.dockerfile }}
+          push: true
+          tags: ghcr.io/${{ github.repository }}/${{ matrix.image.name }}:${{ github.sha }},ghcr.io/${{ github.repository }}/${{ matrix.image.name }}:latest
+          platforms: linux/arm64
+
+  deploy:
+    needs: build-images
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - name: Terraform Init
+        working-directory: infra/terraform
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: infra/terraform
+        run: terraform plan -out=tfplan
+        env:
+          TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+          TF_VAR_minio_root_password: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          TF_VAR_airflow_fernet_key: ${{ secrets.AIRFLOW_FERNET_KEY }}
+          TF_VAR_spark_image_tag: ${{ github.sha }}
+          TF_VAR_airflow_image_tag: ${{ github.sha }}
+          TF_VAR_mlflow_image_tag: ${{ github.sha }}
+
+      - name: Terraform Apply
+        working-directory: infra/terraform
+        run: terraform apply -auto-approve tfplan

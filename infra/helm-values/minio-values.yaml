@@ -1,0 +1,26 @@
+mode: standalone
+
+rootUser: minioadmin
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+persistence:
+  enabled: true
+  size: 10Gi
+
+consoleService:
+  type: NodePort
+  nodePort: 30090
+
+buckets:
+  - name: bronze
+    policy: none
+  - name: mlflow-artifacts
+    policy: none
+  - name: spark-warehouse
+    policy: none

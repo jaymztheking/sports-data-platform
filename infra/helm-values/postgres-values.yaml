@@ -1,0 +1,19 @@
+auth:
+  username: sports_data
+  database: sports_data
+
+primary:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  persistence:
+    enabled: true
+    size: 5Gi
+  service:
+    type: ClusterIP
+
+metrics:
+  enabled: false

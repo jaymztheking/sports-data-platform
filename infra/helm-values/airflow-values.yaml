@@ -1,0 +1,49 @@
+executor: LocalExecutor
+
+webserver:
+  service:
+    type: NodePort
+    nodePorts:
+      http: 30080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+scheduler:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+data:
+  metadataConnection:
+    user: postgres
+    host: postgresql
+    port: 5432
+    db: airflow
+    sslmode: disable
+
+dags:
+  gitSync:
+    enabled: true
+    repo: https://github.com/jamesmedaugh/sports-data-platform.git
+    branch: main
+    subPath: dags
+    wait: 60
+
+config:
+  core:
+    load_examples: "False"
+  webserver:
+    expose_config: "True"
+
+env:
+  - name: AIRFLOW_CONN_SPARK_DEFAULT
+    value: "spark://spark-master:7077"
+  - name: AIRFLOW_CONN_MINIO_DEFAULT
+    value: "aws://minioadmin:minioadmin@?endpoint_url=http://minio:9000"
