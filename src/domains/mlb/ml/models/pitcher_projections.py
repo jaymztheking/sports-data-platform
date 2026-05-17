@@ -51,7 +51,7 @@ def train(features_path: str) -> str:
         mlflow.log_metrics(metrics)
         mlflow.xgboost.log_model(model, artifact_path="model")
 
-        return run.info.run_id
+        return str(run.info.run_id)
 
 
 def evaluate(run_id: str) -> None:

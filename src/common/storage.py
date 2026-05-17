@@ -1,10 +1,11 @@
+from typing import Any
+
 import boto3
-from mypy_boto3_s3.client import S3Client
 
 from src.common.config import settings
 
 
-def get_minio_client() -> S3Client:
+def get_minio_client() -> Any:
     """Create a boto3 S3 client configured for MinIO."""
     cfg = settings.minio
     return boto3.client(

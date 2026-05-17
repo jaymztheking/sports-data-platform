@@ -3,7 +3,6 @@
 from pyspark.sql import SparkSession
 from sqlalchemy import Engine
 
-
 ICEBERG_TABLES = ["mlb.statcast", "mlb.batting", "mlb.pitching", "mlb.schedules"]
 
 
@@ -12,10 +11,9 @@ def load_table_to_postgres(spark: SparkSession, engine: Engine, table_name: str)
     df = spark.read.format("iceberg").load(f"iceberg.{table_name}")
     pdf = df.toPandas()
 
-    pg_table = table_name.replace(".", "_")  # mlb.statcast -> mlb_statcast
-    short_name = table_name.split(".")[-1]   # statcast
+    short_name = table_name.split(".")[-1]
 
-    pdf.to_sql(
+    pdf.to_sql(  # type: ignore[attr-defined]
         name=short_name,
         con=engine,
         schema="raw_mlb",

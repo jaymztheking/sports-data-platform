@@ -29,6 +29,7 @@ dev = [
     "ruff>=0.5",
     "mypy>=1.10",
     "pytest>=8.0",
+    "requests>=2.32",
     "pre-commit>=3.7",
 ]
 dbt = [
@@ -49,10 +50,37 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["N812", "N806"]
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+module = [
+    "boto3",
+    "boto3.*",
+    "pandas",
+    "pandas.*",
+    "pybaseball",
+    "pybaseball.*",
+    "pyspark",
+    "pyspark.*",
+    "sklearn",
+    "sklearn.*",
+    "xgboost",
+    "xgboost.*",
+    "mlflow",
+    "mlflow.*",
+    "pyiceberg",
+    "pyiceberg.*",
+]
+ignore_missing_imports = true
+allow_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "k3s: requires K3s cluster access (kubectl, services, etc.)",
+]

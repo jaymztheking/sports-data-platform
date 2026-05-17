@@ -1,6 +1,6 @@
 """Tests for configuration module."""
 
-from src.common.config import PostgresSettings, MinioSettings
+from src.common.config import MinioSettings, PostgresSettings
 
 
 def test_postgres_settings_defaults():
