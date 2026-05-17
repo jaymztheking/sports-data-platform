@@ -84,3 +84,8 @@ testpaths = ["tests"]
 markers = [
     "k3s: requires K3s cluster access (kubectl, services, etc.)",
 ]
+
+[dependency-groups]
+dev = [
+    "psycopg2-binary>=2.9.12",
+]

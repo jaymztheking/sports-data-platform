@@ -8,8 +8,7 @@ resource "kubernetes_config_map" "postgres_init" {
     "init.sql" = <<-SQL
       CREATE DATABASE airflow;
       CREATE DATABASE mlflow;
-
-      \c sports_data;
+    \c sports_data
       CREATE SCHEMA IF NOT EXISTS raw_mlb;
       CREATE SCHEMA IF NOT EXISTS raw_nfl;
       CREATE SCHEMA IF NOT EXISTS raw_nba;
@@ -23,9 +22,9 @@ resource "kubernetes_config_map" "postgres_init" {
 resource "helm_release" "postgresql" {
   name       = "postgresql"
   namespace  = kubernetes_namespace.data_platform.metadata[0].name
-  repository = "https://charts.bitnami.com/bitnami"
+  repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "postgresql"
-  version    = "15.5.0"
+  version    = "18.6.6"
 
   values = [file("${path.module}/../helm-values/postgres-values.yaml")]
 

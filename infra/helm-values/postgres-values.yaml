@@ -13,7 +13,9 @@ primary:
     enabled: true
     size: 5Gi
   service:
-    type: ClusterIP
+    type: NodePort
+    nodePorts:
+      postgresql: "30432"
 
 metrics:
   enabled: false

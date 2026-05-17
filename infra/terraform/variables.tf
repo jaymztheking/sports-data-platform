@@ -29,9 +29,9 @@ variable "airflow_fernet_key" {
 }
 
 variable "image_registry" {
-  description = "Container image registry prefix"
+  description = "Container image registry prefix (Docker Hub username)"
   type        = string
-  default     = "ghcr.io/jamesmedaugh/sports-data-platform"
+  default     = "jaymztheking"
 }
 
 variable "spark_image_tag" {
@@ -50,4 +50,10 @@ variable "mlflow_image_tag" {
   description = "Tag for the custom MLflow image"
   type        = string
   default     = "latest"
+}
+
+variable "node_ip" {
+  description = "IP address of any K3s node (used to construct NodePort service URLs in outputs)"
+  type        = string
+  default     = "NODE_IP"
 }

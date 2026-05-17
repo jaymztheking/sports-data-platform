@@ -4,17 +4,18 @@
 
 Sports data platform — medallion architecture for NFL, MLB, NBA, NHL analytics. K3s cluster on 6 Raspberry Pis (ARM64). See README.md for full architecture.
 
-## TODO — Story/Test Restructuring (next session)
+## Board State
 
-The roadmap stories and validation tests need restructuring. Core problem:
+Stories 002–010 are **infrastructure/deployment** stories: IaC files exist but services have **not been deployed to K3s**. They live in `planned/` and must be completed in numerical order.
 
-**Stories like 003 (PostgreSQL Helm Release) say "I want PostgreSQL deployed via Helm on K3s" but the validation tests split into "local file checks" that just verify config files exist and "k3s tests" that check the actual deployment. This is wrong.** The story is about deploying PostgreSQL — a test that checks if `postgres.tf` contains the right strings does NOT validate that story. The story isn't done until PostgreSQL is actually running on K3s.
+Stories 011–021 are **code-writing** stories: modules/DAGs/models are drafted and local tests pass. They live in `drafted/` and will be E2E validated via stories 025–026 once infrastructure is up.
 
-What needs to happen:
-1. **Merge the "write config" and "deploy the thing" concepts.** Story 003 should not be completable by just having the right file contents. The deploy/verify stories (022-024) should not be separate — deployment verification belongs IN each service's story.
-2. **Restructure validation tests accordingly.** Remove the false split between "local file checks" and "k3s cluster checks". A story about deploying PostgreSQL should have ONE set of tests, and those tests verify that PostgreSQL is actually deployed and working. File-content checks are at best a precondition, not validation.
-3. **Eliminate stories 022-024** (deploy-and-verify-k3s, build-push-arm64-images, verify-deploy-pipeline) as standalone stories. Their acceptance criteria should be folded into the relevant service stories or kept as a single infrastructure prerequisite story.
-4. **Re-evaluate what "drafted" means.** Right now 20 stories sit in drafted with passing "local" tests that don't prove anything about the actual user story. These should not be treated as partially validated.
+Stories 022–024 have been **deleted** — their acceptance criteria were folded into the relevant service stories (002–010).
+
+### Validation test conventions (enforced)
+- Infrastructure stories (002–010): `pytestmark = pytest.mark.k3s` at module level; ONE test class per file; ALL tests verify live cluster state. No file-content checks.
+- Code stories (011–021): no k3s marker; tests verify module structure, imports, and logic against real repo modules.
+- A story is not moved to `validating/` until its test class passes against the live K3s cluster.
 
 ## Conventions
 

@@ -5,6 +5,11 @@ master:
       memory: 512Mi
     limits:
       memory: 1Gi
+  service:
+    type: NodePort
+    nodePorts:
+      cluster: ""
+      http: "30808"
 
 worker:
   replicaCount: 2

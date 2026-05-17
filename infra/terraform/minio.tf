@@ -3,7 +3,7 @@ resource "helm_release" "minio" {
   namespace  = kubernetes_namespace.data_platform.metadata[0].name
   repository = "https://charts.min.io/"
   chart      = "minio"
-  version    = "5.2.0"
+  version    = "5.4.0"
 
   values = [file("${path.module}/../helm-values/minio-values.yaml")]
 

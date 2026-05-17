@@ -70,11 +70,11 @@ def pg_conn():
     """
     psycopg2 = pytest.importorskip("psycopg2")
     conn = psycopg2.connect(
-        host=os.environ.get("POSTGRES_HOST", "localhost"),
-        port=int(os.environ.get("POSTGRES_PORT", "5432")),
+        host=os.environ.get("POSTGRES_HOST", "192.168.50.231"),
+        port=int(os.environ.get("POSTGRES_PORT", "30432")),
         user=os.environ.get("POSTGRES_USER", "postgres"),
-        password=os.environ.get("POSTGRES_PASSWORD", "postgres"),
-        dbname=os.environ.get("POSTGRES_DB", "postgres"),
+        password=os.environ.get("POSTGRES_PASSWORD", "changeme"),
+        dbname=os.environ.get("POSTGRES_DB", "sports_data"),
     )
     yield conn
     conn.close()
@@ -91,7 +91,7 @@ def s3_client():
     boto3 = pytest.importorskip("boto3")
     client = boto3.client(
         "s3",
-        endpoint_url=os.environ.get("MINIO_ENDPOINT", "http://localhost:30090"),
+        endpoint_url=os.environ.get("MINIO_ENDPOINT", "http://192.168.50.231:30900"),
         aws_access_key_id=os.environ.get("MINIO_ROOT_USER", "minioadmin"),
         aws_secret_access_key=os.environ.get("MINIO_ROOT_PASSWORD", "minioadmin"),
     )

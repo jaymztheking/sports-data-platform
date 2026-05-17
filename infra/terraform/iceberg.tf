@@ -98,8 +98,9 @@ resource "kubernetes_service" "iceberg_rest" {
     port {
       port        = 8181
       target_port = 8181
+      node_port   = 30181
     }
 
-    type = "ClusterIP"
+    type = "NodePort"
   }
 }

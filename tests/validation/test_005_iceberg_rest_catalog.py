@@ -1,101 +1,58 @@
 """Validation tests for Story 005 – Iceberg REST Catalog Deployment.
 
-Verifies that an Iceberg REST catalog is deployed on K3s with correct
-image, S3FileIO config, and resource limits.
+All tests verify deployed cluster state. Story is not done until
+the catalog pod is Running, the HTTP endpoint responds, and it is
+confirmed to run on ARM64.
 """
 
 import json
 import os
+import subprocess
 
 import pytest
 
-from .conftest import TERRAFORM_DIR
+from .conftest import KUBECONFIG, NAMESPACE
 
-# ---------------------------------------------------------------------------
-# Helper
-# ---------------------------------------------------------------------------
+pytestmark = pytest.mark.k3s
 
 
-def _read_tf() -> str:
-    path = os.path.join(TERRAFORM_DIR, "iceberg.tf")
-    assert os.path.isfile(path), "iceberg.tf does not exist"
-    with open(path) as fh:
-        return fh.read()
+class TestIcebergRestCatalog:
+    """Story 005: Iceberg REST Catalog Deployment."""
 
-
-# ---------------------------------------------------------------------------
-# Local file checks
-# ---------------------------------------------------------------------------
-
-
-class TestIcebergTerraformFile:
-    """Story 005: Iceberg REST Catalog – Terraform file checks."""
-
-    def test_deployment_and_service_resources(self):
-        """AC: iceberg.tf defines kubernetes_deployment and kubernetes_service resources."""
-        content = _read_tf()
-        assert "kubernetes_deployment" in content, "No kubernetes_deployment in iceberg.tf"
-        assert "kubernetes_service" in content, "No kubernetes_service in iceberg.tf"
-
-    def test_tabulario_image(self):
-        """AC: Uses tabulario/iceberg-rest:1.5.0 image."""
-        content = _read_tf()
-        assert "tabulario/iceberg-rest" in content, "tabulario/iceberg-rest image not found"
-
-    def test_s3fileio_configured(self):
-        """AC: Configured to use S3FileIO pointing to MinIO."""
-        content = _read_tf()
-        assert "s3" in content.lower(), "S3FileIO configuration not found"
-
-    def test_warehouse_path(self):
-        """AC: Warehouse path set to s3://spark-warehouse/."""
-        content = _read_tf()
-        assert "s3://spark-warehouse" in content, "Warehouse path not set to s3://spark-warehouse/"
-
-    def test_aws_credentials_reference(self):
-        """AC: AWS credentials reference MinIO secret."""
-        content = _read_tf()
-        assert "aws" in content.lower() or "minio" in content.lower(), (
-            "AWS/MinIO credential reference not found"
-        )
-
-    def test_resource_limits(self):
-        """AC: Resource limits appropriate for Raspberry Pi (256Mi-512Mi)."""
-        content = _read_tf()
-        assert "256Mi" in content or "512Mi" in content, (
-            "No ARM64-appropriate resource limits found"
-        )
-
-    def test_depends_on_minio(self):
-        """AC: Depends on MinIO deployment."""
-        content = _read_tf()
-        assert "depends_on" in content or "minio" in content.lower(), (
-            "No dependency on MinIO found"
-        )
-
-
-# ---------------------------------------------------------------------------
-# Cluster-dependent checks
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.k3s
-class TestIcebergCluster:
-    """Story 005: Iceberg REST Catalog – cluster checks."""
-
-    def test_iceberg_pod_running(self, kubectl):
-        """AC (runtime): Iceberg REST catalog pod is running."""
+    def test_pod_running(self, kubectl):
+        """AC: Iceberg REST catalog pod is Running in the data-platform namespace."""
         result = kubectl("get", "pods", "-o", "json")
-        assert result.returncode == 0
-        data = json.loads(result.stdout)
-        iceberg_pods = [
-            p for p in data.get("items", [])
-            if "iceberg" in p["metadata"]["name"].lower()
-        ]
-        assert len(iceberg_pods) > 0, "No Iceberg REST catalog pods found"
+        assert result.returncode == 0, f"kubectl failed: {result.stderr}"
+        pods = json.loads(result.stdout).get("items", [])
+        iceberg_pods = [p for p in pods if "iceberg" in p["metadata"]["name"].lower()]
+        assert iceberg_pods, "No Iceberg REST catalog pods found"
+        phase = iceberg_pods[0]["status"]["phase"]
+        assert phase == "Running", f"Iceberg pod phase is '{phase}', expected 'Running'"
 
-    def test_iceberg_health(self, http):
-        """AC (runtime): Iceberg REST catalog responds to health check."""
-        url = os.environ.get("ICEBERG_REST_URL", "http://localhost:8181")
+    def test_config_endpoint_responds(self, http):
+        """AC: Catalog HTTP endpoint responds — GET /v1/config returns 200."""
+        url = os.environ.get("ICEBERG_REST_URL", "http://192.168.50.231:30181")
         resp = http.get(f"{url}/v1/config", timeout=10)
-        assert resp.status_code == 200, f"Iceberg REST catalog returned {resp.status_code}"
+        assert resp.status_code == 200, f"Iceberg /v1/config returned {resp.status_code}"
+
+    def test_running_on_arm64_node(self, kubectl):
+        """AC: tabulario/iceberg-rest confirmed running on ARM64 Pi node."""
+        result = kubectl("get", "pods", "-o", "json")
+        pods = json.loads(result.stdout).get("items", [])
+        iceberg_pods = [p for p in pods if "iceberg" in p["metadata"]["name"].lower()]
+        assert iceberg_pods, "No Iceberg pods found"
+        node_name = iceberg_pods[0]["spec"]["nodeName"]
+        node_result = subprocess.run(
+            ["kubectl", "--kubeconfig", KUBECONFIG, "get", "node", node_name, "-o", "json"],
+            capture_output=True, text=True, timeout=30,
+        )
+        assert node_result.returncode == 0
+        node_data = json.loads(node_result.stdout)
+        arch = node_data["status"]["nodeInfo"]["architecture"]
+        assert arch == "arm64", f"Iceberg pod is on '{arch}' node, expected 'arm64'"
+
+    def test_warehouse_reachable(self, s3_client):
+        """AC: S3FileIO warehouse bucket (spark-warehouse) is accessible from catalog perspective."""
+        response = s3_client.list_buckets()
+        bucket_names = {b["Name"] for b in response["Buckets"]}
+        assert "spark-warehouse" in bucket_names, "spark-warehouse bucket not found in MinIO"
