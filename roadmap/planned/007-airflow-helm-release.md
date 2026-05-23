@@ -75,13 +75,26 @@ This ran successfully and populated the `alembic_version` table in the `airflow`
 **Note:** if the Helm release is deleted and re-created, this Job must be re-run. Consider investigating why `migrationJob.useHelmHooks: false` doesn't create the Job automatically — may need `createUserJob.useHelmHooks: false` too, or a chart-version-specific config key.
 
 ### Remaining work to complete story 007
-1. Confirm scheduler readiness probe passes (was pending at session end — likely just needs time, memory increase to 2Gi should fix OOMKill)
-2. Confirm webserver readiness probe passes
+1. ✅ Scheduler readiness probe — scheduler is **3/3 Running** after memory bump to 2Gi
+2. Webserver readiness probe — still pending at session end. Two ReplicaSets cycling (SIGTERM/exit 0, not OOMKill). May need `webserver.readinessProbe.initialDelaySeconds` increased for slow ARM64 gunicorn startup, or just needs time to stabilize. Try adding to values:
+   ```yaml
+   webserver:
+     readinessProbe:
+       initialDelaySeconds: 60
+   ```
 3. Verify Airflow UI at `http://192.168.50.231:30007`
-4. Create Airflow admin user if needed: `kubectl exec -n data-platform <webserver-pod> -- airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com`
+4. Default admin credentials: `username: admin / password: admin` (set by chart)
 5. Confirm git-sync is populating `/opt/airflow/dags`
 6. Run validation tests: `uv run pytest tests/validation/test_007_airflow_helm_release.py -m k3s -v`
 7. Commit + push all changes, move story to `completed/`
+
+### Terraform state note
+The Helm release has been cycled several times due to failures. After each failed apply, the state was cleaned with:
+```
+kubectl delete secret -n data-platform sh.helm.release.v1.airflow.v1
+terraform -chdir=infra/terraform state rm helm_release.airflow
+```
+The apply at session end (task `bdhllvcux`, 900s timeout) was still running. Check its outcome at start of next session. If it's failed/tainted, clean state and re-apply — the DB migration is already done so it should converge quickly.
 
 ### Terraform state note
 The Helm release has been cycled several times due to failures. After each failed apply, the state was cleaned with:
