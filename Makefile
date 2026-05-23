@@ -1,4 +1,4 @@
-.PHONY: install lint test dbt-run dbt-test tf-init tf-plan tf-apply build-images build-spark
+.PHONY: install lint test dbt-run dbt-test tf-init tf-plan tf-apply build-images build-spark build-airflow
 
 install:
 	uv sync --all-extras
@@ -32,8 +32,7 @@ build-spark:
 	docker build -t jaymztheking/spark:latest -f docker/spark/Dockerfile .
 	docker push jaymztheking/spark:latest
 
-build-images:
-	docker build -t ghcr.io/jamesmedaugh/sports-data-platform/airflow:latest -f docker/airflow/Dockerfile .
-	docker build -t ghcr.io/jamesmedaugh/sports-data-platform/spark:latest -f docker/spark/Dockerfile .
-	docker build -t ghcr.io/jamesmedaugh/sports-data-platform/mlflow:latest -f docker/mlflow/Dockerfile .
-	docker build -t ghcr.io/jamesmedaugh/sports-data-platform/ingestion:latest -f docker/ingestion/Dockerfile .
+build-airflow:
+	docker buildx build --platform linux/arm64 -t jaymztheking/airflow:latest -f docker/airflow/Dockerfile . --push
+
+build-images: build-spark build-airflow

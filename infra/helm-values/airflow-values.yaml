@@ -1,10 +1,17 @@
 executor: LocalExecutor
 
+# Disable bundled Bitnami PostgreSQL — use the existing postgresql release instead.
+postgresql:
+  enabled: false
+
 webserver:
   service:
     type: NodePort
-    nodePorts:
-      http: 30080
+    ports:
+      - name: airflow-ui
+        port: 8080
+        targetPort: airflow-ui
+        nodePort: 30007
   resources:
     requests:
       cpu: 100m
@@ -16,9 +23,12 @@ scheduler:
   resources:
     requests:
       cpu: 100m
-      memory: 256Mi
-    limits:
       memory: 512Mi
+    limits:
+      memory: 2Gi
+
+migrationJob:
+  useHelmHooks: false
 
 data:
   metadataConnection:
@@ -27,11 +37,12 @@ data:
     port: 5432
     db: airflow
     sslmode: disable
+    # pass is injected via terraform set_sensitive (var.postgres_password)
 
 dags:
   gitSync:
     enabled: true
-    repo: https://github.com/jamesmedaugh/sports-data-platform.git
+    repo: https://github.com/jaymztheking/sports-data-platform.git
     branch: main
     subPath: dags
     wait: 60
