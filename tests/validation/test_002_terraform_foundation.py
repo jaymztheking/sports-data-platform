@@ -5,7 +5,6 @@ the data-platform namespace exists and kubectl can reach the cluster.
 """
 
 import json
-import os
 import shutil
 import subprocess
 
@@ -39,7 +38,7 @@ class TestTerraformFoundation:
         assert phase == "Active", f"Namespace phase is '{phase}', expected 'Active'"
 
     def test_terraform_outputs_available(self):
-        """AC: outputs.tf exposes service URLs — terraform output resolves airflow, minio, mlflow."""
+        """AC: outputs.tf exposes service URLs — terraform output resolves airflow, minio, mlflow."""  # noqa: E501
         terraform = shutil.which("terraform") or "terraform"
         result = subprocess.run(
             [terraform, "output", "-json"],

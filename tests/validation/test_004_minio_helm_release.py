@@ -45,7 +45,8 @@ class TestMinioHelmRelease:
         assert pvcs, "No MinIO PVC found"
         for pvc in pvcs:
             status = pvc["status"]["phase"]
-            assert status == "Bound", f"PVC '{pvc['metadata']['name']}' is '{status}', expected 'Bound'"
+            name = pvc["metadata"]["name"]
+            assert status == "Bound", f"PVC '{name}' is '{status}', expected 'Bound'"
 
     def test_s3_api_reachable(self, s3_client):
         """AC: S3 API is functional (list-buckets round-trip succeeds)."""

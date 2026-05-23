@@ -6,8 +6,6 @@ Verifies that MLB team reference data is available as a dbt seed file.
 import csv
 import os
 
-import pytest
-
 from .conftest import DBT_DIR
 
 SEEDS_DIR = os.path.join(DBT_DIR, "seeds")
@@ -21,7 +19,7 @@ class TestMlbSeeds:
     """Story 018: MLB Reference Seeds."""
 
     def test_mlb_teams_csv_exists(self):
-        """AC: mlb_teams.csv contains all 30 MLB teams with abbreviation, full name, league, and division."""
+        """AC: mlb_teams.csv contains all 30 MLB teams with abbreviation, full name, league, and division."""  # noqa: E501
         # Search for the CSV file under seeds/
         csv_path = None
         for root, _dirs, files in os.walk(SEEDS_DIR):

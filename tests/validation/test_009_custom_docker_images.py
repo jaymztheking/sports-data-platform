@@ -62,7 +62,7 @@ class TestCustomDockerImages:
         )
 
     def test_spark_ghcr_image_running(self, kubectl):
-        """AC: Custom Spark image (with Iceberg JARs) built for ARM64, pushed to GHCR, and running."""
+        """AC: Custom Spark image (with Iceberg JARs) built for ARM64, pushed to GHCR, and running."""  # noqa: E501
         result = kubectl("get", "pods", "-l", "app.kubernetes.io/component=master", "-o", "json")
         pods = json.loads(result.stdout).get("items", [])
         assert pods, "No Spark master pod found — story 006 must be complete first"

@@ -33,9 +33,11 @@ class TestCommonPythonModules:
     """Story 011: Common Python Modules."""
 
     def test_config_pydantic_settings(self):
-        """AC: config.py uses Pydantic Settings with env var prefixes for Postgres, MinIO, and Spark."""
+        """AC: config.py uses Pydantic Settings with env var prefixes for Postgres, MinIO, and Spark."""  # noqa: E501
         content = _read_module("config.py")
-        assert "pydantic" in content.lower() or "BaseSettings" in content or "Settings" in content, (
+        assert (
+            "pydantic" in content.lower() or "BaseSettings" in content or "Settings" in content
+        ), (
             "Pydantic Settings not used in config.py"
         )
         for svc in ["postgres", "minio", "spark"]:

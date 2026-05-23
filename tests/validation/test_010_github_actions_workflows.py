@@ -76,7 +76,7 @@ class TestGitHubActionsWorkflows:
         )
 
     def test_required_secrets_configured(self):
-        """AC: GitHub Secrets POSTGRES_PASSWORD, MINIO_ROOT_PASSWORD, AIRFLOW_FERNET_KEY configured."""
+        """AC: GitHub Secrets POSTGRES_PASSWORD, MINIO_ROOT_PASSWORD, AIRFLOW_FERNET_KEY configured."""  # noqa: E501
         _require_gh()
         result = _gh("secret", "list", "--json", "name")
         assert result.returncode == 0, f"gh secret list failed: {result.stderr}"

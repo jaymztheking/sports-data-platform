@@ -11,7 +11,7 @@ import subprocess
 
 import pytest
 
-from .conftest import KUBECONFIG, NAMESPACE
+from .conftest import KUBECONFIG
 
 pytestmark = pytest.mark.k3s
 
@@ -52,7 +52,7 @@ class TestIcebergRestCatalog:
         assert arch == "arm64", f"Iceberg pod is on '{arch}' node, expected 'arm64'"
 
     def test_warehouse_reachable(self, s3_client):
-        """AC: S3FileIO warehouse bucket (spark-warehouse) is accessible from catalog perspective."""
+        """AC: S3FileIO warehouse bucket (spark-warehouse) is accessible from catalog perspective."""  # noqa: E501
         response = s3_client.list_buckets()
         bucket_names = {b["Name"] for b in response["Buckets"]}
         assert "spark-warehouse" in bucket_names, "spark-warehouse bucket not found in MinIO"

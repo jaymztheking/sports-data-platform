@@ -5,8 +5,6 @@ Verifies that an Airflow DAG runs dbt models for MLB staging and mart layers.
 
 import os
 
-import pytest
-
 from .conftest import DAGS_DIR
 
 DAG_FILE = os.path.join(DAGS_DIR, "mlb", "mlb_transform_dag.py")

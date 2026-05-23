@@ -41,7 +41,7 @@ class TestMlbIngestionModules:
     """Story 012: MLB Ingestion Modules."""
 
     def test_statcast_module(self):
-        """AC: statcast.py fetches pitch-level Statcast data for a date range, writes to iceberg.mlb.statcast."""
+        """AC: statcast.py fetches pitch-level Statcast data for a date range, writes to iceberg.mlb.statcast."""  # noqa: E501
         content = _read_module("statcast.py")
         assert "statcast" in content.lower(), "Statcast logic not found"
 
@@ -56,7 +56,7 @@ class TestMlbIngestionModules:
         assert "pitching" in content.lower(), "Pitching logic not found"
 
     def test_schedules_module(self):
-        """AC: schedules.py fetches game schedules for all 30 MLB teams, writes to iceberg.mlb.schedules."""
+        """AC: schedules.py fetches game schedules for all 30 MLB teams, writes to iceberg.mlb.schedules."""  # noqa: E501
         content = _read_module("schedules.py")
         assert "schedule" in content.lower(), "Schedule logic not found"
 
@@ -81,6 +81,8 @@ class TestMlbIngestionModules:
         for module in ["statcast.py", "batting.py", "pitching.py", "schedules.py"]:
             content = _read_module(module)
             # Should have some form of write to Iceberg
-            assert "write" in content.lower() or "writeTo" in content or "save" in content.lower(), (
+            assert (
+                "write" in content.lower() or "writeTo" in content or "save" in content.lower()
+            ), (
                 f"{module} missing Iceberg write step"
             )

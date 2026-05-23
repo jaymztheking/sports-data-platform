@@ -42,9 +42,9 @@ class TestMlbMlPipelineCode:
     def test_features_module(self):
         """AC: features.py queries gold pitching tables, computes lag features, saves to parquet."""
         content = _read_module("features.py")
-        assert "lag" in content.lower() or "prev" in content.lower() or "shift" in content.lower(), (
-            "Lag feature computation not found in features.py"
-        )
+        assert (
+            "lag" in content.lower() or "prev" in content.lower() or "shift" in content.lower()
+        ), "Lag feature computation not found in features.py"
         assert "parquet" in content.lower(), "Parquet output not found in features.py"
 
     def test_pitcher_projections_xgboost(self):

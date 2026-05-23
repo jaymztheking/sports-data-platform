@@ -6,8 +6,6 @@ the project structure is ready for expansion.
 
 import os
 
-import pytest
-
 from .conftest import SRC_DIR
 
 DOMAINS_DIR = os.path.join(SRC_DIR, "domains")

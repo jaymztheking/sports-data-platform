@@ -8,8 +8,6 @@ import json
 
 import pytest
 
-from .conftest import NAMESPACE
-
 pytestmark = pytest.mark.k3s
 
 
@@ -58,7 +56,8 @@ class TestPostgresqlHelmRelease:
         assert pvcs, "No PostgreSQL PVC found"
         for pvc in pvcs:
             status = pvc["status"]["phase"]
-            assert status == "Bound", f"PVC '{pvc['metadata']['name']}' is '{status}', expected 'Bound'"
+            name = pvc["metadata"]["name"]
+            assert status == "Bound", f"PVC '{name}' is '{status}', expected 'Bound'"
 
     def test_resource_limits_set(self, kubectl):
         """AC: Resource limits are ARM64-appropriate (256Mi request / 512Mi limit)."""

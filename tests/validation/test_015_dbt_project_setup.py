@@ -6,7 +6,6 @@ materializations, profiles, and packages.
 
 import os
 
-import pytest
 import yaml
 
 from .conftest import DBT_DIR

@@ -6,8 +6,6 @@ parallel tasks, postgres load, and correct scheduling.
 
 import os
 
-import pytest
-
 from .conftest import DAGS_DIR
 
 # ---------------------------------------------------------------------------

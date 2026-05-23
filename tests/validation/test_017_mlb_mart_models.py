@@ -45,12 +45,12 @@ class TestMlbMartModels:
         assert "player" in content.lower(), "Player dimension logic not found"
 
     def test_fct_mlb_batting_season(self):
-        """AC: fct_mlb_batting_season.sql selects season batting stats filtered to players with plate appearances."""
+        """AC: fct_mlb_batting_season.sql selects season batting stats filtered to players with plate appearances."""  # noqa: E501
         content = _read_model("fct_mlb_batting_season.sql")
         assert "batting" in content.lower(), "Batting fact logic not found"
 
     def test_fct_mlb_pitching_season(self):
-        """AC: fct_mlb_pitching_season.sql selects season pitching stats filtered to players with innings pitched."""
+        """AC: fct_mlb_pitching_season.sql selects season pitching stats filtered to players with innings pitched."""  # noqa: E501
         content = _read_model("fct_mlb_pitching_season.sql")
         assert "pitching" in content.lower(), "Pitching fact logic not found"
 
