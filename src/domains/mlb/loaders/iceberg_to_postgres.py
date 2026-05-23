@@ -13,7 +13,7 @@ def load_table_to_postgres(spark: SparkSession, engine: Engine, table_name: str)
 
     short_name = table_name.split(".")[-1]
 
-    pdf.to_sql(  # type: ignore[attr-defined]
+    pdf.to_sql(
         name=short_name,
         con=engine,
         schema="raw_mlb",
