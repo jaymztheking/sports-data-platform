@@ -1,6 +1,6 @@
 output "airflow_url" {
   description = "Airflow webserver URL (set node_ip variable to a Pi node address)"
-  value       = "http://${var.node_ip}:30080"
+  value       = "http://${var.node_ip}:30007"
 }
 
 output "minio_console_url" {

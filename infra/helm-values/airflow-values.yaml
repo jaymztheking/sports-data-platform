@@ -15,9 +15,11 @@ webserver:
   resources:
     requests:
       cpu: 100m
-      memory: 256Mi
-    limits:
       memory: 512Mi
+    limits:
+      memory: 1500Mi
+  startupProbe:
+    failureThreshold: 18
 
 scheduler:
   resources:
@@ -52,6 +54,7 @@ config:
     load_examples: "False"
   webserver:
     expose_config: "True"
+    workers: "2"
 
 env:
   - name: AIRFLOW_CONN_SPARK_DEFAULT

@@ -40,21 +40,32 @@ class TestAirflowHelmRelease:
         resp = http.get(f"{url}/health", timeout=10)
         assert resp.status_code == 200, f"Airflow health endpoint returned {resp.status_code}"
 
-    def test_metadata_db_connected(self, pg_conn):
-        """AC: Metadata DB connected to PostgreSQL airflow database — DAG states persist."""
-        cur = pg_conn.cursor()
-        cur.execute("SELECT datname FROM pg_database WHERE datname = 'airflow'")
-        result = cur.fetchone()
-        cur.close()
-        assert result is not None, "airflow database not found in PostgreSQL"
+    def test_metadata_db_connected(self, http):
+        """AC: Metadata DB connected to PostgreSQL airflow database — DAG states persist.
+
+        Uses the /health endpoint's metadatabase status rather than a direct psycopg2
+        connection so the test doesn't require DB credentials on the test runner.
+        """
+        url = os.environ.get("AIRFLOW_URL", "http://192.168.50.231:30007")
+        resp = http.get(f"{url}/health", timeout=10)
+        assert resp.status_code == 200
+        health = resp.json()
+        status = health.get("metadatabase", {}).get("status")
+        assert status == "healthy", f"Airflow metadatabase status is '{status}', expected 'healthy'"
 
     def test_dags_synced(self, kubectl):
-        """AC: git-sync sidecar syncing DAGs — DAG files present in webserver pod."""
-        result = kubectl("get", "pods", "-l", "component=webserver", "-o", "json")
+        """AC: git-sync sidecar syncing DAGs from main branch — DAG files present.
+
+        git-sync runs on the scheduler (not the webserver) for LocalExecutor.
+        DAGs land at /opt/airflow/dags/repo/<subPath> per the chart's gitSync config.
+        """
+        result = kubectl("get", "pods", "-l", "component=scheduler", "-o", "json")
         pods = json.loads(result.stdout).get("items", [])
-        assert pods, "No Airflow webserver pod found"
+        assert pods, "No Airflow scheduler pod found"
         pod_name = pods[0]["metadata"]["name"]
-        ls_result = kubectl("exec", pod_name, "--", "ls", "/opt/airflow/dags")
+        ls_result = kubectl(
+            "exec", pod_name, "-c", "scheduler", "--", "ls", "/opt/airflow/dags/repo/dags"
+        )
         assert ls_result.returncode == 0, f"Could not list DAGs directory: {ls_result.stderr}"
         assert ls_result.stdout.strip(), "DAGs directory is empty — git-sync may not be working"
 
