@@ -1,4 +1,4 @@
-.PHONY: install lint test dbt-run dbt-test tf-init tf-plan tf-apply build-images
+.PHONY: install lint test dbt-run dbt-test tf-init tf-plan tf-apply build-images build-spark
 
 install:
 	uv sync --all-extras
@@ -27,6 +27,10 @@ tf-plan:
 
 tf-apply:
 	cd infra/terraform && terraform apply
+
+build-spark:
+	docker build -t jaymztheking/spark:latest -f docker/spark/Dockerfile .
+	docker push jaymztheking/spark:latest
 
 build-images:
 	docker build -t ghcr.io/jamesmedaugh/sports-data-platform/airflow:latest -f docker/airflow/Dockerfile .
