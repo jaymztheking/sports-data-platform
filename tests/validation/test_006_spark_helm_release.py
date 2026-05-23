@@ -17,7 +17,7 @@ class TestSparkHelmRelease:
 
     def test_master_pod_running(self, kubectl):
         """AC: Spark master pod is Running in the data-platform namespace."""
-        result = kubectl("get", "pods", "-l", "app.kubernetes.io/component=master", "-o", "json")
+        result = kubectl("get", "pods", "-l", "app=spark,component=master", "-o", "json")
         assert result.returncode == 0, f"kubectl failed: {result.stderr}"
         pods = json.loads(result.stdout).get("items", [])
         assert pods, "No Spark master pod found"
@@ -26,7 +26,7 @@ class TestSparkHelmRelease:
 
     def test_two_worker_pods_running(self, kubectl):
         """AC: 2 Spark worker pods are Running in the data-platform namespace."""
-        result = kubectl("get", "pods", "-l", "app.kubernetes.io/component=worker", "-o", "json")
+        result = kubectl("get", "pods", "-l", "app=spark,component=worker", "-o", "json")
         assert result.returncode == 0, f"kubectl failed: {result.stderr}"
         pods = json.loads(result.stdout).get("items", [])
         running = [p for p in pods if p["status"]["phase"] == "Running"]
@@ -43,7 +43,7 @@ class TestSparkHelmRelease:
 
     def test_custom_image_from_registry(self, kubectl):
         """AC: Custom Spark image (with Iceberg JARs) running — not stock bitnami image."""
-        result = kubectl("get", "pods", "-l", "app.kubernetes.io/component=master", "-o", "json")
+        result = kubectl("get", "pods", "-l", "app=spark,component=master", "-o", "json")
         pods = json.loads(result.stdout).get("items", [])
         assert pods, "No Spark master pod found"
         images = [c["image"] for c in pods[0]["spec"]["containers"]]
