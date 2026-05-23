@@ -31,10 +31,10 @@ Mostly unused imports (F401, auto-fixable) and lines > 100 chars (E501) in valid
 
 ## Acceptance Criteria
 
-- [ ] `uv run ruff check src/ tests/` exits 0 (no violations)
-- [ ] `uv run pytest tests/` exits 0 in a clean environment with no kubeconfig (k3s tests excluded or skipped)
-- [ ] CI lint and test jobs both show green on the next push
-- [ ] k3s validation tests are still runnable locally with `pytest -m k3s`
+- [x] `uv run ruff check src/ tests/` exits 0 (no violations)
+- [x] `uv run pytest tests/` exits 0 in a clean environment with no kubeconfig (k3s tests excluded or skipped)
+- [x] CI lint and test jobs both show green on the next push
+- [x] k3s validation tests are still runnable locally with `pytest -m k3s`
 
 ## Implementation Notes
 
