@@ -7,7 +7,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 USER airflow
 
 RUN pip install --no-cache-dir \
-    --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.11.txt" \
     "pyspark>=3.5" \
     "pybaseball>=2.2" \
     "pyiceberg>=0.7" \
