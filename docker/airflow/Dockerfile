@@ -7,4 +7,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 USER airflow
 
 COPY pyproject.toml uv.lock* ./
-RUN pip install --no-cache-dir ".[ingestion]"
+RUN pip install --no-cache-dir \
+    --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.11.txt" \
+    ".[ingestion]"
