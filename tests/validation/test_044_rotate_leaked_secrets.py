@@ -5,7 +5,6 @@ affected services healthy.
 """
 
 import json
-import subprocess
 
 import psycopg2
 import pytest
