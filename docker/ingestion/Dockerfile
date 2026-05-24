@@ -6,7 +6,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY pyproject.toml uv.lock* ./
-RUN pip install --no-cache-dir uv && \
-    uv pip install --system ".[ingestion]"
+RUN pip install --no-cache-dir ".[ingestion]"
 
 COPY src/ ./src/
