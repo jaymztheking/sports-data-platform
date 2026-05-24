@@ -58,8 +58,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify Terraform
-        run: terraform version
+      - name: Install Terraform
+        run: |
+          if ! command -v terraform &>/dev/null; then
+            curl -fsSL https://releases.hashicorp.com/terraform/1.9.0/terraform_1.9.0_linux_arm64.zip -o /tmp/terraform.zip
+            unzip -q /tmp/terraform.zip -d /tmp
+            sudo mv /tmp/terraform /usr/local/bin/terraform
+            rm /tmp/terraform.zip
+          fi
+          terraform version
 
       - name: Terraform Init
         working-directory: infra/terraform
