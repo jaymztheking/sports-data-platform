@@ -29,9 +29,16 @@ variable "airflow_fernet_key" {
 }
 
 variable "image_registry" {
-  description = "Container image registry prefix (Docker Hub username)"
+  description = "Container image registry prefix (e.g. ghcr.io/owner/repo)"
   type        = string
-  default     = "jaymztheking"
+  default     = "ghcr.io/jaymztheking/sports-data-platform"
+}
+
+variable "ghcr_token" {
+  description = "GitHub PAT with read:packages scope — used to create the GHCR imagePullSecret. Omit if GHCR packages are public."
+  type        = string
+  sensitive   = true
+  default     = ""
 }
 
 variable "spark_image_tag" {

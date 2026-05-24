@@ -24,6 +24,10 @@ resource "kubernetes_deployment" "mlflow" {
       }
 
       spec {
+        image_pull_secrets {
+          name = kubernetes_secret.ghcr_pull_secret.metadata[0].name
+        }
+
         container {
           name  = "mlflow"
           image = "${var.image_registry}/mlflow:${var.mlflow_image_tag}"

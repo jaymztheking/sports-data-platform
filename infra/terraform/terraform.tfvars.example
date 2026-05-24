@@ -7,3 +7,8 @@ node_ip         = "192.168.1.100"   # IP of any Pi node
 postgres_password  = "changeme"
 minio_root_password = "changeme"
 airflow_fernet_key = "run: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+
+# GitHub PAT with read:packages scope — needed to pull private GHCR images.
+# Create at https://github.com/settings/tokens and add to GitHub Actions secrets as GHCR_TOKEN.
+# Alternatively, make GHCR packages public and leave this empty.
+ghcr_token = ""

@@ -52,6 +52,10 @@ resource "kubernetes_stateful_set" "spark_master" {
         labels = local.spark_master_labels
       }
       spec {
+        image_pull_secrets {
+          name = kubernetes_secret.ghcr_pull_secret.metadata[0].name
+        }
+
         security_context {
           run_as_user     = 185
           run_as_non_root = true
@@ -154,6 +158,10 @@ resource "kubernetes_stateful_set" "spark_worker" {
         labels = local.spark_worker_labels
       }
       spec {
+        image_pull_secrets {
+          name = kubernetes_secret.ghcr_pull_secret.metadata[0].name
+        }
+
         security_context {
           run_as_user     = 185
           run_as_non_root = true

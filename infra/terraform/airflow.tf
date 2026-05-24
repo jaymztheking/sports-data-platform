@@ -8,16 +8,19 @@ resource "helm_release" "airflow" {
 
   values = [file("${path.module}/../helm-values/airflow-values.yaml")]
 
-  # Stock apache/airflow image (ARM64-compatible). Switch to custom image
-  # once story 009 (ARM64 CI build + Docker Hub push) is complete.
   set {
     name  = "images.airflow.repository"
-    value = "apache/airflow"
+    value = "${var.image_registry}/airflow"
   }
 
   set {
     name  = "images.airflow.tag"
-    value = "2.9.3-python3.11"
+    value = var.airflow_image_tag
+  }
+
+  set {
+    name  = "imagePullSecrets[0].name"
+    value = kubernetes_secret.ghcr_pull_secret.metadata[0].name
   }
 
   set_sensitive {

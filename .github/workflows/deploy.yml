@@ -66,10 +66,21 @@ jobs:
           TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
           TF_VAR_minio_root_password: ${{ secrets.MINIO_ROOT_PASSWORD }}
           TF_VAR_airflow_fernet_key: ${{ secrets.AIRFLOW_FERNET_KEY }}
+          TF_VAR_image_registry: ghcr.io/${{ github.repository }}
           TF_VAR_spark_image_tag: ${{ github.sha }}
           TF_VAR_airflow_image_tag: ${{ github.sha }}
           TF_VAR_mlflow_image_tag: ${{ github.sha }}
+          TF_VAR_ghcr_token: ${{ secrets.GHCR_TOKEN }}
 
       - name: Terraform Apply
         working-directory: infra/terraform
         run: terraform apply -auto-approve tfplan
+        env:
+          TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+          TF_VAR_minio_root_password: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          TF_VAR_airflow_fernet_key: ${{ secrets.AIRFLOW_FERNET_KEY }}
+          TF_VAR_image_registry: ghcr.io/${{ github.repository }}
+          TF_VAR_spark_image_tag: ${{ github.sha }}
+          TF_VAR_airflow_image_tag: ${{ github.sha }}
+          TF_VAR_mlflow_image_tag: ${{ github.sha }}
+          TF_VAR_ghcr_token: ${{ secrets.GHCR_TOKEN }}
