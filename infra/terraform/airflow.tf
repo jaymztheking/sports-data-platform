@@ -19,6 +19,11 @@ resource "helm_release" "airflow" {
   }
 
   set {
+    name  = "images.airflow.pullPolicy"
+    value = "Always"
+  }
+
+  set {
     name  = "imagePullSecrets[0].name"
     value = kubernetes_secret.ghcr_pull_secret.metadata[0].name
   }
