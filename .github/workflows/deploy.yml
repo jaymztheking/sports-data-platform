@@ -61,7 +61,9 @@ jobs:
       - name: Set up kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d \
+            | sed "s|https://127.0.0.1:6443|https://${{ secrets.K3S_SERVER_IP }}:6443|" \
+            > ~/.kube/config
           chmod 600 ~/.kube/config
 
       - name: Install Terraform
