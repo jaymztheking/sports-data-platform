@@ -58,6 +58,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
       - name: Install Terraform
         run: |
           if ! command -v terraform &>/dev/null; then
