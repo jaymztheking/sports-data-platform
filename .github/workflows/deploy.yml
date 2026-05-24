@@ -49,6 +49,8 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}/${{ matrix.image.name }}:${{ github.sha }},ghcr.io/${{ github.repository }}/${{ matrix.image.name }}:latest
           platforms: linux/arm64
+          cache-from: type=gha,scope=${{ matrix.image.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
 
   deploy:
     needs: build-images
