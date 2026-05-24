@@ -11,6 +11,8 @@ on:
 jobs:
   build-images:
     runs-on: self-hosted
+    permissions:
+      packages: write
     strategy:
       matrix:
         image:
