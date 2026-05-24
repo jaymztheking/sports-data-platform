@@ -6,7 +6,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 USER airflow
 
-COPY pyproject.toml uv.lock* ./
 RUN pip install --no-cache-dir \
     --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.3/constraints-3.11.txt" \
-    ".[ingestion]"
+    "pyspark>=3.5" \
+    "pybaseball>=2.2" \
+    "pyiceberg>=0.7" \
+    "nfl-data-py>=0.3" \
+    "nba-api>=1.4"
