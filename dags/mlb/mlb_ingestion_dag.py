@@ -52,45 +52,22 @@ def mlb_ingestion():
     @task
     def ingest_schedules(season: int) -> None:
         from src.common.spark import get_spark_session
+        from src.domains.mlb.ingestion.schedules import MLB_TEAMS
         from src.domains.mlb.ingestion.schedules import ingest_schedules as _ingest
 
-        mlb_teams = [
-            "NYY", "BOS", "TBR", "TOR", "BAL",
-            "CLE", "MIN", "CHW", "DET", "KCR",
-            "HOU", "SEA", "TEX", "LAA", "OAK",
-            "ATL", "NYM", "PHI", "MIA", "WSN",
-            "MIL", "CHC", "STL", "PIT", "CIN",
-            "LAD", "SDP", "SFG", "ARI", "COL",
-        ]
         spark = get_spark_session("mlb_schedules_ingestion")
         try:
-            _ingest(spark, season, mlb_teams)
+            _ingest(spark, season, MLB_TEAMS)
         finally:
             spark.stop()
-
-    @task
-    def load_to_postgres() -> None:
-        from src.common.postgres import get_engine
-        from src.common.spark import get_spark_session
-        from src.domains.mlb.loaders.iceberg_to_postgres import load_all_to_postgres
-
-        spark = get_spark_session("mlb_iceberg_to_postgres")
-        engine = get_engine()
-        try:
-            load_all_to_postgres(spark, engine)
-        finally:
-            spark.stop()
-            engine.dispose()
 
     current_season = 2024
 
-    statcast = ingest_statcast(start_dt="2024-03-28", end_dt="2024-09-29")
-    batting = ingest_batting(season=current_season)
-    pitching = ingest_pitching(season=current_season)
-    schedules = ingest_schedules(season=current_season)
-
-    load = load_to_postgres()
-    [statcast, batting, pitching, schedules] >> load
+    # Four independent ingestion tasks — no inter-dependencies, run in parallel.
+    ingest_statcast(start_dt="2024-03-28", end_dt="2024-09-29")
+    ingest_batting(season=current_season)
+    ingest_pitching(season=current_season)
+    ingest_schedules(season=current_season)
 
 
 mlb_ingestion()

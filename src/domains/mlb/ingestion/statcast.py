@@ -13,7 +13,12 @@ def fetch_statcast(start_dt: str, end_dt: str) -> pd.DataFrame:
     return pybaseball.statcast(start_dt=start_dt, end_dt=end_dt)
 
 
-def ingest_statcast(spark: SparkSession, start_dt: str, end_dt: str) -> None:
+def ingest_statcast(
+    spark: SparkSession,
+    start_dt: str,
+    end_dt: str,
+    table: str = "iceberg.mlb.statcast",
+) -> None:
     """Fetch Statcast data and write to Iceberg table on MinIO."""
     pdf = fetch_statcast(start_dt, end_dt)
     if pdf.empty:
@@ -24,6 +29,4 @@ def ingest_statcast(spark: SparkSession, start_dt: str, end_dt: str) -> None:
     df = df.withColumn("source", F.lit("pybaseball.statcast"))
     df = df.withColumn("season", F.year(F.col("game_date")))
 
-    df.writeTo("iceberg.mlb.statcast").using("iceberg").partitionedBy(
-        "season"
-    ).createOrReplace()
+    df.writeTo(table).using("iceberg").partitionedBy("season").createOrReplace()

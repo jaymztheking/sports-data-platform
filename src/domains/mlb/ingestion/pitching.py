@@ -13,7 +13,9 @@ def fetch_pitching_stats(season: int) -> pd.DataFrame:
     return pybaseball.pitching_stats(season)
 
 
-def ingest_pitching(spark: SparkSession, season: int) -> None:
+def ingest_pitching(
+    spark: SparkSession, season: int, table: str = "iceberg.mlb.pitching"
+) -> None:
     """Fetch pitching stats and write to Iceberg table on MinIO."""
     pdf = fetch_pitching_stats(season)
     if pdf.empty:
@@ -24,6 +26,4 @@ def ingest_pitching(spark: SparkSession, season: int) -> None:
     df = df.withColumn("source", F.lit("pybaseball.pitching_stats"))
     df = df.withColumn("season", F.lit(season))
 
-    df.writeTo("iceberg.mlb.pitching").using("iceberg").partitionedBy(
-        "season"
-    ).createOrReplace()
+    df.writeTo(table).using("iceberg").partitionedBy("season").createOrReplace()

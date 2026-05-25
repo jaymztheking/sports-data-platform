@@ -7,13 +7,25 @@ import pybaseball
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
+# All 30 MLB franchises using pybaseball's schedule_and_record abbreviations
+MLB_TEAMS: list[str] = [
+    "ARI", "ATL", "BAL", "BOS", "CHC", "CHW", "CIN", "CLE", "COL", "DET",
+    "HOU", "KCR", "LAA", "LAD", "MIA", "MIL", "MIN", "NYM", "NYY", "OAK",
+    "PHI", "PIT", "SDP", "SEA", "SFG", "STL", "TBR", "TEX", "TOR", "WSN",
+]
+
 
 def fetch_schedule(season: int, team: str) -> pd.DataFrame:
     """Fetch schedule and record for a team/season using pybaseball."""
     return pybaseball.schedule_and_record(season, team)
 
 
-def ingest_schedules(spark: SparkSession, season: int, teams: list[str]) -> None:
+def ingest_schedules(
+    spark: SparkSession,
+    season: int,
+    teams: list[str] = MLB_TEAMS,
+    table: str = "iceberg.mlb.schedules",
+) -> None:
     """Fetch schedules for all teams and write to Iceberg table on MinIO."""
     all_schedules = []
     for team in teams:
@@ -31,6 +43,4 @@ def ingest_schedules(spark: SparkSession, season: int, teams: list[str]) -> None
     df = df.withColumn("source", F.lit("pybaseball.schedule_and_record"))
     df = df.withColumn("season", F.lit(season))
 
-    df.writeTo("iceberg.mlb.schedules").using("iceberg").partitionedBy(
-        "season"
-    ).createOrReplace()
+    df.writeTo(table).using("iceberg").partitionedBy("season").createOrReplace()
