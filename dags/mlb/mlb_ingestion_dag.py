@@ -34,7 +34,7 @@ def _pod(task_id: str, script: str) -> KubernetesPodOperator:
         image_pull_policy="Always",
         image_pull_secrets=_PULL_SECRETS,
         env_vars=_ENV,
-        cmds=["python", "-c"],
+        cmds=["python3", "-c"],
         arguments=[script],
         in_cluster=True,
         is_delete_operator_pod=True,

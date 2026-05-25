@@ -365,7 +365,7 @@ def _run_in_ingestion_pod(script: str, pod_name: str, timeout: int = 600) -> sub
          "--image-pull-policy=Always",
          f"--overrides={overrides}",
          *env_args,
-         "--", "python", "-c", script],
+         "--", "python3", "-c", script],
         capture_output=True, text=True, timeout=30, check=True,
     )
     # Wait for the pod to finish (Succeeded or Failed).
