@@ -11,4 +11,5 @@ RUN pip install --no-cache-dir \
     "pybaseball>=2.2" \
     "pyiceberg>=0.7" \
     "nfl-data-py>=0.3" \
-    "nba-api>=1.4"
+    "nba-api>=1.4" \
+    "pydantic-settings>=2.0"

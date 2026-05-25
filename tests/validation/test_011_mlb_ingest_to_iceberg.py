@@ -333,8 +333,16 @@ def _exec_python(pod: str, script: str, timeout: int = 600) -> subprocess.Comple
 
 
 # Driver: runs inside the Airflow pod (has src/, pybaseball, pandas, pyspark client).
+# git-sync places the repo under dags/.worktrees/<sha>/ which is not on sys.path by default.
+_WORKTREE_SYSPATH = """\
+import glob as _g, sys as _sys, os as _os
+for _wt in _g.glob('/opt/airflow/dags/.worktrees/*/src'):
+    _sys.path.insert(0, _os.path.dirname(_wt))
+"""
+
 # Micro-ingests all four tables into the throwaway TEST_NS and prints a count line.
 _INGEST_DRIVER = f"""
+{_WORKTREE_SYSPATH}
 import json
 from src.common.spark import get_spark_session
 from src.domains.mlb.ingestion.statcast import ingest_statcast
@@ -357,6 +365,7 @@ finally:
 """
 
 _TEARDOWN_DRIVER = f"""
+{_WORKTREE_SYSPATH}
 from src.common.spark import get_spark_session
 spark = get_spark_session("mlb_ci_teardown")
 for t in {TABLES!r}:
