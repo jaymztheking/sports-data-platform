@@ -85,6 +85,21 @@ def pg_conn():
 # ---------------------------------------------------------------------------
 
 
+def _minio_password() -> str:
+    """Return MinIO root password from env var or K8s secret."""
+    if pw := os.environ.get("MINIO_ROOT_PASSWORD"):
+        return pw
+    result = subprocess.run(
+        ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE,
+         "get", "secret", "minio", "-o", "jsonpath={.data.rootPassword}"],
+        capture_output=True, text=True, timeout=10,
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        import base64
+        return base64.b64decode(result.stdout.strip()).decode()
+    return "minioadmin"
+
+
 @pytest.fixture()
 def s3_client():
     """Return a boto3 S3 client configured for MinIO."""
@@ -93,7 +108,7 @@ def s3_client():
         "s3",
         endpoint_url=os.environ.get("MINIO_ENDPOINT", "http://192.168.50.231:30900"),
         aws_access_key_id=os.environ.get("MINIO_ROOT_USER", "minioadmin"),
-        aws_secret_access_key=os.environ.get("MINIO_ROOT_PASSWORD", "minioadmin"),
+        aws_secret_access_key=_minio_password(),
     )
     return client
 

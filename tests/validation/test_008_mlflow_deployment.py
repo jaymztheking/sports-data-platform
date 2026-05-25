@@ -27,17 +27,22 @@ class TestMlflowDeployment:
 
     def test_ui_accessible(self, http):
         """AC: MLflow UI accessible at NodePort 30500."""
-        url = os.environ.get("MLFLOW_URL", "http://localhost:30500")
+        url = os.environ.get("MLFLOW_URL", "http://192.168.50.231:30500")
         resp = http.get(url, timeout=10)
         assert resp.status_code == 200, f"MLflow UI returned {resp.status_code}"
 
     def test_experiments_persist(self, http):
         """AC: Experiment runs persist across restarts — REST API reads from PostgreSQL backend."""
-        url = os.environ.get("MLFLOW_URL", "http://localhost:30500")
-        resp = http.get(f"{url}/api/2.0/mlflow/experiments/list", timeout=10)
+        url = os.environ.get("MLFLOW_URL", "http://192.168.50.231:30500")
+        resp = http.get(f"{url}/api/2.0/mlflow/experiments/search", params={"max_results": 10}, timeout=10)
         assert resp.status_code == 200, f"MLflow experiments API returned {resp.status_code}"
         data = resp.json()
         assert "experiments" in data, "MLflow experiments API did not return experiments list"
+        # Default experiment artifact_location points to MinIO, confirming both backends
+        locations = [e.get("artifact_location", "") for e in data["experiments"]]
+        assert any("s3://" in loc for loc in locations), (
+            f"No S3 artifact location found; locations: {locations}"
+        )
 
     def test_artifact_store_reachable(self, s3_client):
         """AC: Artifact store connected to MinIO mlflow-artifacts bucket."""
