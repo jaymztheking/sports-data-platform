@@ -269,10 +269,10 @@ class TestMlbIngestStructure:
         assert {"mlb", "ingestion", "bronze"} <= tags
 
     def test_dag_has_four_ingestion_tasks(self):
-        _, tree = _parse(DAG_FILE)
-        names = {n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
-        for fn in ("ingest_statcast", "ingest_batting", "ingest_pitching", "ingest_schedules"):
-            assert fn in names, f"DAG missing task {fn}"
+        """Four KubernetesPodOperator calls — one per table — are present in the DAG."""
+        source, _ = _parse(DAG_FILE)
+        for table in ("ingest_statcast", "ingest_batting", "ingest_pitching", "ingest_schedules"):
+            assert table in source, f"DAG missing call for task '{table}'"
 
     def test_ingestion_tasks_run_in_parallel(self):
         """The four ingestion tasks have no declared dependencies — fully parallel."""
@@ -287,13 +287,11 @@ class TestMlbIngestStructure:
         )
 
     def test_dag_uses_mlb_teams_constant(self):
-        """DAG must source teams from schedules.MLB_TEAMS, not a duplicated literal."""
+        """Schedules task script references MLB_TEAMS constant, not a hardcoded list."""
         source, tree = _parse(DAG_FILE)
-        imports_constant = any(
-            isinstance(n, ast.ImportFrom) and any(a.name == "MLB_TEAMS" for a in n.names)
-            for n in ast.walk(tree)
-        )
-        assert imports_constant, "DAG should import MLB_TEAMS from schedules"
+        # MLB_TEAMS must appear somewhere in the DAG source (inline script or import).
+        assert "MLB_TEAMS" in source, "DAG schedules task must reference MLB_TEAMS"
+        # No top-level literal list of ≥30 team strings (would be a hardcoded duplicate).
         big_lists = [
             n for n in ast.walk(tree)
             if isinstance(n, ast.List) and len(n.elts) >= 30
@@ -308,41 +306,19 @@ class TestMlbIngestStructure:
 
 pytest_k3s = pytest.mark.k3s
 
-
-def _airflow_pod() -> str:
-    """Return the name of a running Airflow pod to exec the micro-ingest driver in."""
-    for selector in ("component=scheduler", "component=worker", "component=triggerer"):
-        r = subprocess.run(
-            ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE,
-             "get", "pods", "-l", selector, "--field-selector=status.phase=Running",
-             "-o", "jsonpath={.items[0].metadata.name}"],
-            capture_output=True, text=True, timeout=30,
-        )
-        if r.returncode == 0 and r.stdout.strip():
-            return r.stdout.strip()
-    pytest.skip("no running Airflow pod found to run micro-ingest")
-    return ""
-
-
-def _exec_python(pod: str, script: str, timeout: int = 600) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE,
-         "exec", pod, "--", "python", "-c", script],
-        capture_output=True, text=True, timeout=timeout,
-    )
-
-
-# Driver: runs inside the Airflow pod (has src/, pybaseball, pandas, pyspark client).
-# git-sync places the repo under dags/.worktrees/<sha>/ which is not on sys.path by default.
-_WORKTREE_SYSPATH = """\
-import glob as _g, sys as _sys, os as _os
-for _wt in _g.glob('/opt/airflow/dags/.worktrees/*/src'):
-    _sys.path.insert(0, _os.path.dirname(_wt))
-"""
+# ingestion-spark image: extends the Spark image with pybaseball/pydantic-settings/src/.
+# src/ is at /app/src/ with PYTHONPATH=/app, so `from src.x import y` works directly.
+_INGEST_IMAGE = "ghcr.io/jaymztheking/sports-data-platform/ingestion-spark:latest"
+_INGEST_ENV = {
+    "SPARK_MASTER_URL": "spark://spark-master-svc:7077",
+    "SPARK_ICEBERG_CATALOG_URI": "http://iceberg-rest:8181",
+    "SPARK_S3_ENDPOINT": "http://minio:9000",
+    "MINIO_ACCESS_KEY": "minioadmin",
+    "MINIO_SECRET_KEY": "minioadmin",
+}
 
 # Micro-ingests all four tables into the throwaway TEST_NS and prints a count line.
 _INGEST_DRIVER = f"""
-{_WORKTREE_SYSPATH}
 import json
 from src.common.spark import get_spark_session
 from src.domains.mlb.ingestion.statcast import ingest_statcast
@@ -365,7 +341,6 @@ finally:
 """
 
 _TEARDOWN_DRIVER = f"""
-{_WORKTREE_SYSPATH}
 from src.common.spark import get_spark_session
 spark = get_spark_session("mlb_ci_teardown")
 for t in {TABLES!r}:
@@ -375,12 +350,68 @@ spark.stop()
 """
 
 
+def _run_in_ingestion_pod(script: str, pod_name: str, timeout: int = 600) -> subprocess.CompletedProcess:
+    """Run a Python script in a temporary ingestion-spark pod and return its result."""
+    env_args = [f"--env={k}={v}" for k, v in _INGEST_ENV.items()]
+    # imagePullSecrets must be injected via --overrides since kubectl run has no --pull-secret flag.
+    overrides = json.dumps({
+        "spec": {"imagePullSecrets": [{"name": "ghcr-pull-secret"}]}
+    })
+    subprocess.run(
+        ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE,
+         "run", pod_name,
+         f"--image={_INGEST_IMAGE}",
+         "--restart=Never",
+         "--image-pull-policy=Always",
+         f"--overrides={overrides}",
+         *env_args,
+         "--", "python", "-c", script],
+        capture_output=True, text=True, timeout=30, check=True,
+    )
+    # Wait for the pod to finish (Succeeded or Failed).
+    subprocess.run(
+        ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE,
+         "wait", f"pod/{pod_name}",
+         "--for=jsonpath={.status.phase}=Succeeded",
+         f"--timeout={timeout}s"],
+        capture_output=True, text=True, timeout=timeout + 10,
+    )
+    # Capture logs and exit code regardless of phase.
+    logs = subprocess.run(
+        ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE, "logs", pod_name],
+        capture_output=True, text=True, timeout=30,
+    )
+    phase = subprocess.run(
+        ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE,
+         "get", "pod", pod_name, "-o", "jsonpath={.status.phase}"],
+        capture_output=True, text=True, timeout=10,
+    )
+    return subprocess.CompletedProcess(
+        args=[],
+        returncode=0 if phase.stdout.strip() == "Succeeded" else 1,
+        stdout=logs.stdout,
+        stderr=logs.stderr,
+    )
+
+
+def _delete_pod(pod_name: str) -> None:
+    subprocess.run(
+        ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE,
+         "delete", "pod", pod_name, "--ignore-not-found"],
+        capture_output=True, text=True, timeout=30,
+    )
+
+
 @pytest.fixture(scope="module")
 def micro_ingest(request):
     """Run the all-four micro-ingest into mlb_ci; yield row counts; tear down."""
     pytest.importorskip("requests")  # REST assertions need it
-    pod = _airflow_pod()
-    result = _exec_python(pod, _INGEST_DRIVER)
+    pod_name = "mlb-ci-micro-ingest"
+    _delete_pod(pod_name)  # clean up any leftover from a prior run
+
+    result = _run_in_ingestion_pod(_INGEST_DRIVER, pod_name)
+    _delete_pod(pod_name)
+
     if result.returncode != 0:
         pytest.fail(
             f"micro-ingest driver failed:\n"
@@ -392,8 +423,12 @@ def micro_ingest(request):
             counts = json.loads(line[len("MLB_CI_COUNTS="):])
     assert counts is not None, f"driver did not emit counts:\n{result.stdout}"
 
+    teardown_pod = "mlb-ci-teardown"
+
     def _teardown():
-        _exec_python(pod, _TEARDOWN_DRIVER, timeout=300)
+        _delete_pod(teardown_pod)
+        _run_in_ingestion_pod(_TEARDOWN_DRIVER, teardown_pod, timeout=300)
+        _delete_pod(teardown_pod)
     request.addfinalizer(_teardown)
     return counts
 
@@ -442,7 +477,19 @@ class TestMlbIngestIntegration:
         assert micro_ingest[table] > 0, f"{TEST_NS}.{table} ingested 0 rows"
 
     def test_dag_registered_and_importable(self):
-        pod = _airflow_pod()
+        """DAG is importable and registered — checked via the Airflow scheduler pod."""
+        for selector in ("component=scheduler", "component=triggerer"):
+            r = subprocess.run(
+                ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE,
+                 "get", "pods", "-l", selector, "--field-selector=status.phase=Running",
+                 "-o", "jsonpath={.items[0].metadata.name}"],
+                capture_output=True, text=True, timeout=30,
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                pod = r.stdout.strip()
+                break
+        else:
+            pytest.skip("no running Airflow scheduler pod found")
 
         def _airflow(*args):
             return subprocess.run(

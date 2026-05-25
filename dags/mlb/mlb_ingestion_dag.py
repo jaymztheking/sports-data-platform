@@ -1,11 +1,45 @@
 """MLB Bronze Layer Ingestion DAG.
 
-Fetches MLB data from pybaseball APIs and writes to Iceberg tables on MinIO.
+Each task runs in a dedicated ingestion-spark pod (KubernetesPodOperator).
+The pod image has Java, the Iceberg JARs, and all Python deps baked in.
+Airflow is a pure orchestrator — no Spark or Java needed in the Airflow image.
 """
 
 from datetime import datetime
 
-from airflow.decorators import dag, task
+from airflow.decorators import dag
+from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
+from kubernetes.client import models as k8s
+
+_IMAGE = "ghcr.io/jaymztheking/sports-data-platform/ingestion-spark:latest"
+_NAMESPACE = "data-platform"
+_PULL_SECRETS = [k8s.V1LocalObjectReference(name="ghcr-pull-secret")]
+
+# Env vars the ingestion-spark image reads via src/common/config.py (pydantic-settings).
+_ENV = [
+    k8s.V1EnvVar(name="SPARK_MASTER_URL", value="spark://spark-master-svc:7077"),
+    k8s.V1EnvVar(name="SPARK_ICEBERG_CATALOG_URI", value="http://iceberg-rest:8181"),
+    k8s.V1EnvVar(name="SPARK_S3_ENDPOINT", value="http://minio:9000"),
+    k8s.V1EnvVar(name="MINIO_ACCESS_KEY", value="minioadmin"),
+    k8s.V1EnvVar(name="MINIO_SECRET_KEY", value="minioadmin"),
+]
+
+
+def _pod(task_id: str, script: str) -> KubernetesPodOperator:
+    return KubernetesPodOperator(
+        task_id=task_id,
+        name=f"mlb-ingest-{task_id.replace('_', '-')}",
+        namespace=_NAMESPACE,
+        image=_IMAGE,
+        image_pull_policy="Always",
+        image_pull_secrets=_PULL_SECRETS,
+        env_vars=_ENV,
+        cmds=["python", "-c"],
+        arguments=[script],
+        in_cluster=True,
+        is_delete_operator_pod=True,
+        get_logs=True,
+    )
 
 
 @dag(
@@ -16,58 +50,45 @@ from airflow.decorators import dag, task
     tags=["mlb", "ingestion", "bronze"],
 )
 def mlb_ingestion():
-    @task
-    def ingest_statcast(start_dt: str, end_dt: str) -> None:
-        from src.common.spark import get_spark_session
-        from src.domains.mlb.ingestion.statcast import ingest_statcast as _ingest
+    _pod("ingest_statcast", """\
+from src.common.spark import get_spark_session
+from src.domains.mlb.ingestion.statcast import ingest_statcast
+spark = get_spark_session("mlb_statcast_ingestion")
+try:
+    ingest_statcast(spark, "2024-03-28", "2024-09-29")
+finally:
+    spark.stop()
+""")
 
-        spark = get_spark_session("mlb_statcast_ingestion")
-        try:
-            _ingest(spark, start_dt, end_dt)
-        finally:
-            spark.stop()
+    _pod("ingest_batting", """\
+from src.common.spark import get_spark_session
+from src.domains.mlb.ingestion.batting import ingest_batting
+spark = get_spark_session("mlb_batting_ingestion")
+try:
+    ingest_batting(spark, 2024)
+finally:
+    spark.stop()
+""")
 
-    @task
-    def ingest_batting(season: int) -> None:
-        from src.common.spark import get_spark_session
-        from src.domains.mlb.ingestion.batting import ingest_batting as _ingest
+    _pod("ingest_pitching", """\
+from src.common.spark import get_spark_session
+from src.domains.mlb.ingestion.pitching import ingest_pitching
+spark = get_spark_session("mlb_pitching_ingestion")
+try:
+    ingest_pitching(spark, 2024)
+finally:
+    spark.stop()
+""")
 
-        spark = get_spark_session("mlb_batting_ingestion")
-        try:
-            _ingest(spark, season)
-        finally:
-            spark.stop()
-
-    @task
-    def ingest_pitching(season: int) -> None:
-        from src.common.spark import get_spark_session
-        from src.domains.mlb.ingestion.pitching import ingest_pitching as _ingest
-
-        spark = get_spark_session("mlb_pitching_ingestion")
-        try:
-            _ingest(spark, season)
-        finally:
-            spark.stop()
-
-    @task
-    def ingest_schedules(season: int) -> None:
-        from src.common.spark import get_spark_session
-        from src.domains.mlb.ingestion.schedules import MLB_TEAMS
-        from src.domains.mlb.ingestion.schedules import ingest_schedules as _ingest
-
-        spark = get_spark_session("mlb_schedules_ingestion")
-        try:
-            _ingest(spark, season, MLB_TEAMS)
-        finally:
-            spark.stop()
-
-    current_season = 2024
-
-    # Four independent ingestion tasks — no inter-dependencies, run in parallel.
-    ingest_statcast(start_dt="2024-03-28", end_dt="2024-09-29")
-    ingest_batting(season=current_season)
-    ingest_pitching(season=current_season)
-    ingest_schedules(season=current_season)
+    _pod("ingest_schedules", """\
+from src.common.spark import get_spark_session
+from src.domains.mlb.ingestion.schedules import MLB_TEAMS, ingest_schedules
+spark = get_spark_session("mlb_schedules_ingestion")
+try:
+    ingest_schedules(spark, 2024, MLB_TEAMS)
+finally:
+    spark.stop()
+""")
 
 
 mlb_ingestion()

@@ -27,6 +27,9 @@ jobs:
           - name: ingestion
             context: .
             dockerfile: docker/ingestion/Dockerfile
+          - name: ingestion-spark
+            context: .
+            dockerfile: docker/ingestion-spark/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
