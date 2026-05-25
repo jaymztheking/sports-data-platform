@@ -50,7 +50,7 @@ variable "spark_image_tag" {
 variable "airflow_image_tag" {
   description = "Tag for the custom Airflow image"
   type        = string
-  default     = "88065c45aa7339d0ac640aea41810ab3527a4052"
+  default     = "201097800920159735163acba81f76fd4e80acbd"
 }
 
 variable "mlflow_image_tag" {
