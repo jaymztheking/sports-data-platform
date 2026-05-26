@@ -1,6 +1,23 @@
+import pandas as pd
 from pyspark.sql import SparkSession
 
 from src.common.config import settings
+
+
+def sanitize_for_spark(pdf: pd.DataFrame) -> pd.DataFrame:
+    """Cast columns containing dicts/lists to str so Spark can infer a flat schema.
+
+    pybaseball occasionally returns object-dtype columns with mixed scalar/nested
+    values. Spark's schema inference fails with CANNOT_MERGE_TYPE when it sees
+    LongType in one row and StructType (dict) in another. Stringifying only the
+    non-scalar values resolves the conflict while preserving None → null mapping.
+    """
+    for col in pdf.select_dtypes(include="object").columns:
+        if pdf[col].apply(lambda x: isinstance(x, (dict, list))).any():
+            pdf[col] = pdf[col].apply(
+                lambda x: str(x) if isinstance(x, (dict, list)) else x
+            )
+    return pdf
 
 
 def get_spark_session(app_name: str) -> SparkSession:
