@@ -1,5 +1,7 @@
 """Ingest MLB game schedules into Iceberg via PySpark."""
 
+from __future__ import annotations
+
 from datetime import datetime
 
 import pandas as pd
