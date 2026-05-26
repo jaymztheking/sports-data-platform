@@ -22,4 +22,8 @@ COPY src/ ./src/
 # src/ lives at /app/src/ — add /app to PYTHONPATH so `from src.x import y` resolves.
 ENV PYTHONPATH=/app
 
+# User 185 (spark) has no home dir in the base image; pybaseball caches to ~/.pybaseball.
+RUN mkdir -p /home/spark && chown 185:185 /home/spark
+ENV HOME=/home/spark
+
 USER 185
