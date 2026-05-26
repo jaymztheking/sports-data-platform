@@ -5,18 +5,25 @@ from src.common.config import settings
 
 
 def sanitize_for_spark(pdf: pd.DataFrame) -> pd.DataFrame:
-    """Cast columns containing dicts/lists to str so Spark can infer a flat schema.
+    """Stringify all object-dtype columns so Spark schema inference never fails.
 
-    pybaseball occasionally returns object-dtype columns with mixed scalar/nested
-    values. Spark's schema inference fails with CANNOT_MERGE_TYPE when it sees
-    LongType in one row and StructType (dict) in another. Stringifying only the
-    non-scalar values resolves the conflict while preserving None → null mapping.
+    pybaseball returns object-dtype columns with mixed types across a full season
+    (e.g. LongType in one game, StructType/nested value in another). Rather than
+    trying to detect which values are non-scalar, we stringify the entire object
+    column for the bronze layer — type precision belongs in silver. None/NaN are
+    preserved as Python None so Spark maps them to null.
     """
+    import numpy as np
+
+    def _to_str_or_none(x: object) -> object:
+        if x is None:
+            return None
+        if isinstance(x, float) and np.isnan(x):
+            return None
+        return str(x)
+
     for col in pdf.select_dtypes(include="object").columns:
-        if pdf[col].apply(lambda x: isinstance(x, (dict, list))).any():
-            pdf[col] = pdf[col].apply(
-                lambda x: str(x) if isinstance(x, (dict, list)) else x
-            )
+        pdf[col] = pdf[col].apply(_to_str_or_none)
     return pdf
 
 
