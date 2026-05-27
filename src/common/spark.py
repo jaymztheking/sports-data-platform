@@ -60,19 +60,37 @@ def pandas_schema_to_spark(pdf: pd.DataFrame) -> StructType:
 
 
 def sanitize_for_spark(pdf: pd.DataFrame) -> pd.DataFrame:
-    """Stringify all object-dtype columns so the explicit schema is consistent.
+    """Normalise a pybaseball DataFrame so PySpark can safely ingest it.
 
-    pybaseball returns object-dtype columns with mixed types across a full season.
-    We stringify the entire object column for the bronze layer (type precision
-    belongs in silver) and use pandas_schema_to_spark to pass an explicit schema
-    to createDataFrame so Spark never attempts type inference from values.
+    Two-pass approach:
+    1. Convert pandas nullable extension types (Int64, Float64, boolean) to numpy
+       equivalents so pd.NA becomes NaN/None — PySpark's typed columns reject pd.NA.
+    2. Stringify every remaining object-dtype column so the explicit schema derived
+       by pandas_schema_to_spark only ever sees flat scalar types.
+
     None/NaN are preserved as Python None so Spark maps them to null.
     """
-    def _to_str_or_none(x: object) -> object:
+    _NULLABLE_INT = {"Int8", "Int16", "Int32", "Int64",
+                     "UInt8", "UInt16", "UInt32", "UInt64"}
+    _NULLABLE_FLOAT = {"Float32", "Float64"}
+
+    # Pass 1: nullable extension types → numpy types (pd.NA → NaN)
+    for col in pdf.columns:
+        name = pdf[col].dtype.name
+        if name in _NULLABLE_INT:
+            pdf[col] = pdf[col].astype("float64")   # int+NA → float (NaN for missing)
+        elif name in _NULLABLE_FLOAT:
+            target = "float32" if name == "Float32" else "float64"
+            pdf[col] = pdf[col].astype(target)
+        elif name == "boolean":
+            pdf[col] = pdf[col].astype(object)      # handled in pass 2
+
+    # Pass 2: object columns → plain str (or None for missing)
+    def _to_str_or_none(x):
         if x is None:
             return None
         try:
-            if np.isnan(x):  # type: ignore[arg-type]
+            if np.isnan(x):
                 return None
         except (TypeError, ValueError):
             pass
