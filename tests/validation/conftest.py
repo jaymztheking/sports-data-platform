@@ -62,18 +62,34 @@ def kubectl_json():
 # ---------------------------------------------------------------------------
 
 
+def _postgres_password() -> str:
+    """Return Postgres password from env var or K8s secret."""
+    if pw := os.environ.get("POSTGRES_PASSWORD"):
+        return pw
+    result = subprocess.run(
+        ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE,
+         "get", "secret", "postgresql", "-o", "jsonpath={.data.postgres-password}"],
+        capture_output=True, text=True, timeout=10,
+    )
+    if result.returncode == 0 and result.stdout.strip():
+        import base64
+        return base64.b64decode(result.stdout.strip()).decode()
+    return "changeme"
+
+
 @pytest.fixture()
 def pg_conn():
     """Return a psycopg2 connection to the platform PostgreSQL.
 
     Reads env vars: POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD.
+    Falls back to fetching the password from the cluster K8s secret.
     """
     psycopg2 = pytest.importorskip("psycopg2")
     conn = psycopg2.connect(
         host=os.environ.get("POSTGRES_HOST", "192.168.50.231"),
         port=int(os.environ.get("POSTGRES_PORT", "30432")),
         user=os.environ.get("POSTGRES_USER", "postgres"),
-        password=os.environ.get("POSTGRES_PASSWORD", "changeme"),
+        password=_postgres_password(),
         dbname=os.environ.get("POSTGRES_DB", "sports_data"),
     )
     yield conn

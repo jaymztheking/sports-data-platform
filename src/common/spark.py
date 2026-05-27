@@ -119,6 +119,7 @@ def get_spark_session(app_name: str) -> SparkSession:
         .config("spark.sql.catalog.iceberg.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
         .config("spark.sql.catalog.iceberg.s3.endpoint", spark_cfg.s3_endpoint)
         .config("spark.sql.catalog.iceberg.s3.path-style-access", "true")
+        .config("spark.sql.catalog.iceberg.s3.region", "us-east-1")
         .config("spark.sql.defaultCatalog", "iceberg")
         .config("spark.hadoop.fs.s3a.endpoint", spark_cfg.s3_endpoint)
         .config("spark.hadoop.fs.s3a.access.key", minio_cfg.access_key)

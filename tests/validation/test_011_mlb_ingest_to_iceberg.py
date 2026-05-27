@@ -275,15 +275,20 @@ class TestMlbIngestStructure:
             assert table in source, f"DAG missing call for task '{table}'"
 
     def test_ingestion_tasks_run_in_parallel(self):
-        """The four ingestion tasks have no declared dependencies — fully parallel."""
+        """The four ingestion tasks have no sequential dependencies between them."""
+        ingest_names = {"ingest_statcast", "ingest_batting", "ingest_pitching", "ingest_schedules"}
         _, tree = _parse(DAG_FILE)
-        deps = [
+        # Flag any >> where a single ingestion task drives another single ingestion task.
+        chained = [
             n for n in ast.walk(tree)
-            if isinstance(n, ast.BinOp) and isinstance(n.op, (ast.RShift, ast.LShift))
+            if isinstance(n, ast.BinOp)
+            and isinstance(n.op, (ast.RShift, ast.LShift))
+            and isinstance(n.left, ast.Name) and n.left.id in ingest_names
+            and isinstance(n.right, ast.Name) and n.right.id in ingest_names
         ]
-        assert not deps, (
-            "ingestion tasks must not be chained with >>/<< — they run in parallel "
-            f"(found {len(deps)} dependency operators)"
+        assert not chained, (
+            "ingestion tasks must not chain into each other — they run in parallel "
+            f"(found {len(chained)} ingest→ingest dependency operators)"
         )
 
     def test_dag_uses_mlb_teams_constant(self):
@@ -309,13 +314,37 @@ pytest_k3s = pytest.mark.k3s
 # ingestion-spark image: extends the Spark image with pybaseball/pydantic-settings/src/.
 # src/ is at /app/src/ with PYTHONPATH=/app, so `from src.x import y` works directly.
 _INGEST_IMAGE = "ghcr.io/jaymztheking/sports-data-platform/ingestion-spark:latest"
-_INGEST_ENV = {
-    "SPARK_MASTER_URL": "spark://spark-master-svc:7077",
+
+# Non-secret pod environment — credentials are fetched from the cluster secret at runtime.
+_INGEST_ENV_BASE = {
+    # local[*] avoids client-mode driver/worker reverse-connectivity issues.
+    # The test validates ingestion correctness (pybaseball → Iceberg), not Spark clustering.
+    "SPARK_MASTER_URL": "local[*]",
     "SPARK_ICEBERG_CATALOG_URI": "http://iceberg-rest:8181",
     "SPARK_S3_ENDPOINT": "http://minio:9000",
-    "MINIO_ACCESS_KEY": "minioadmin",
-    "MINIO_SECRET_KEY": "minioadmin",
+    "AWS_REGION": "us-east-1",
 }
+
+
+def _minio_env() -> dict:
+    """Fetch MinIO root credentials from the cluster secret and return env-var dict."""
+    import base64
+    result = subprocess.run(
+        ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE,
+         "get", "secret", "minio",
+         "-o", "jsonpath={.data.rootUser}|{.data.rootPassword}"],
+        capture_output=True, text=True, check=True, timeout=15,
+    )
+    user_b64, pwd_b64 = result.stdout.strip().split("|", 1)
+    user = base64.b64decode(user_b64).decode()
+    pwd = base64.b64decode(pwd_b64).decode()
+    return {
+        "MINIO_ACCESS_KEY": user,
+        "MINIO_SECRET_KEY": pwd,
+        # AWS SDK v2 (used by Iceberg S3FileIO) reads these standard env vars.
+        "AWS_ACCESS_KEY_ID": user,
+        "AWS_SECRET_ACCESS_KEY": pwd,
+    }
 
 # Micro-ingests all four tables into the throwaway TEST_NS and prints a count line.
 _INGEST_DRIVER = f"""
@@ -352,7 +381,7 @@ spark.stop()
 
 def _run_in_ingestion_pod(script: str, pod_name: str, timeout: int = 600) -> subprocess.CompletedProcess:
     """Run a Python script in a temporary ingestion-spark pod and return its result."""
-    env_args = [f"--env={k}={v}" for k, v in _INGEST_ENV.items()]
+    env_args = [f"--env={k}={v}" for k, v in {**_INGEST_ENV_BASE, **_minio_env()}.items()]
     # imagePullSecrets must be injected via --overrides since kubectl run has no --pull-secret flag.
     overrides = json.dumps({
         "spec": {"imagePullSecrets": [{"name": "ghcr-pull-secret"}]}
@@ -395,11 +424,14 @@ def _run_in_ingestion_pod(script: str, pod_name: str, timeout: int = 600) -> sub
 
 
 def _delete_pod(pod_name: str) -> None:
-    subprocess.run(
-        ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE,
-         "delete", "pod", pod_name, "--ignore-not-found"],
-        capture_output=True, text=True, timeout=30,
-    )
+    try:
+        subprocess.run(
+            ["kubectl", "--kubeconfig", KUBECONFIG, "-n", NAMESPACE,
+             "delete", "pod", pod_name, "--ignore-not-found", "--grace-period=0"],
+            capture_output=True, text=True, timeout=60,
+        )
+    except subprocess.TimeoutExpired:
+        pass  # best-effort cleanup; pod may already be gone
 
 
 @pytest.fixture(scope="module")

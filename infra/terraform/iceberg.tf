@@ -63,6 +63,11 @@ resource "kubernetes_deployment" "iceberg_rest" {
           }
 
           env {
+            name  = "CATALOG_S3_PATH__STYLE__ACCESS"
+            value = "true"
+          }
+
+          env {
             name  = "AWS_REGION"
             value = "us-east-1"
           }

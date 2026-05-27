@@ -50,7 +50,7 @@ def _pod(task_id: str, script: str) -> KubernetesPodOperator:
     tags=["mlb", "ingestion", "bronze"],
 )
 def mlb_ingestion():
-    _pod("ingest_statcast", """\
+    ingest_statcast = _pod("ingest_statcast", """\
 from src.common.spark import get_spark_session
 from src.domains.mlb.ingestion.statcast import ingest_statcast
 spark = get_spark_session("mlb_statcast_ingestion")
@@ -60,7 +60,7 @@ finally:
     spark.stop()
 """)
 
-    _pod("ingest_batting", """\
+    ingest_batting = _pod("ingest_batting", """\
 from src.common.spark import get_spark_session
 from src.domains.mlb.ingestion.batting import ingest_batting
 spark = get_spark_session("mlb_batting_ingestion")
@@ -70,7 +70,7 @@ finally:
     spark.stop()
 """)
 
-    _pod("ingest_pitching", """\
+    ingest_pitching = _pod("ingest_pitching", """\
 from src.common.spark import get_spark_session
 from src.domains.mlb.ingestion.pitching import ingest_pitching
 spark = get_spark_session("mlb_pitching_ingestion")
@@ -80,7 +80,7 @@ finally:
     spark.stop()
 """)
 
-    _pod("ingest_schedules", """\
+    ingest_schedules = _pod("ingest_schedules", """\
 from src.common.spark import get_spark_session
 from src.domains.mlb.ingestion.schedules import MLB_TEAMS, ingest_schedules
 spark = get_spark_session("mlb_schedules_ingestion")
@@ -89,6 +89,18 @@ try:
 finally:
     spark.stop()
 """)
+
+    load_to_postgres = _pod("load_to_postgres", """\
+from src.common.spark import get_spark_session
+from src.domains.mlb.load.iceberg_to_postgres import load_all_to_postgres
+spark = get_spark_session("mlb_load_to_postgres")
+try:
+    load_all_to_postgres(spark)
+finally:
+    spark.stop()
+""")
+
+    [ingest_statcast, ingest_batting, ingest_pitching, ingest_schedules] >> load_to_postgres
 
 
 mlb_ingestion()
