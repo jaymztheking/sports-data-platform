@@ -40,7 +40,7 @@ _DTYPE_MAP = {
 }
 
 
-def _spark_type_for(dtype: pd.api.types.CategoricalDtype | type) -> object:
+def _spark_type_for(dtype):  # type: ignore[type-arg]
     key = str(dtype)
     if key.startswith("datetime64"):
         return TimestampType()
