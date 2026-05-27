@@ -316,13 +316,13 @@ def _delete_pod(pod_name: str) -> None:
 
 @pytest.fixture(scope="module")
 def postgres_load(request):
-    """Seed synthetic Iceberg data, run loader, yield (pg_conn, iceberg_counts); teardown."""
+    """Seed synthetic Iceberg data, run loader twice, yield (pg_conn, iceberg_counts); teardown."""
     psycopg2 = pytest.importorskip("psycopg2")
 
     # Seed Iceberg with synthetic data.
     seed_pod = "mlb-ci-012-seed"
     _delete_pod(seed_pod)
-    seed_result = _run_pod(_SEED_DRIVER, seed_pod)
+    seed_result = _run_pod(_SEED_DRIVER, seed_pod, timeout=900)
     _delete_pod(seed_pod)
     if seed_result.returncode != 0:
         pytest.fail(f"Seed pod failed:\nSTDOUT:\n{seed_result.stdout}\nSTDERR:\n{seed_result.stderr}")
@@ -332,13 +332,21 @@ def postgres_load(request):
             iceberg_counts = json.loads(line[len("SEED_COUNTS="):])
     assert iceberg_counts is not None, f"Seed pod did not emit counts:\n{seed_result.stdout}"
 
-    # Run loader.
+    # Run loader (first pass).
     load_pod = "mlb-ci-012-load"
     _delete_pod(load_pod)
-    load_result = _run_pod(_LOAD_DRIVER, load_pod)
+    load_result = _run_pod(_LOAD_DRIVER, load_pod, timeout=900)
     _delete_pod(load_pod)
     if load_result.returncode != 0:
         pytest.fail(f"Load pod failed:\nSTDOUT:\n{load_result.stdout}\nSTDERR:\n{load_result.stderr}")
+
+    # Run loader a second time to verify idempotency (replace semantics, no row duplication).
+    reload_pod = "mlb-ci-012-reload"
+    _delete_pod(reload_pod)
+    reload_result = _run_pod(_LOAD_DRIVER, reload_pod, timeout=900)
+    _delete_pod(reload_pod)
+    if reload_result.returncode != 0:
+        pytest.fail(f"Reload pod failed:\nSTDOUT:\n{reload_result.stdout}\nSTDERR:\n{reload_result.stderr}")
 
     # Connect to Postgres locally via NodePort.
     pg_pwd = _postgres_env()["POSTGRES_PASSWORD"]
@@ -431,15 +439,8 @@ class TestMlbLoadIntegration:
     @pytest.mark.k3s
     @pytest.mark.parametrize("table", TABLES)
     def test_idempotent_reload(self, postgres_load, table):
-        """Running the loader a second time must not duplicate rows."""
+        """Loader run twice must not duplicate rows (fixture runs both passes)."""
         conn, iceberg_counts = postgres_load
-
-        load_pod = "mlb-ci-012-reload"
-        _delete_pod(load_pod)
-        result = _run_pod(_LOAD_DRIVER, load_pod)
-        _delete_pod(load_pod)
-        assert result.returncode == 0, f"Reload pod failed:\n{result.stdout}\n{result.stderr}"
-
         with conn.cursor() as cur:
             cur.execute(f"SELECT COUNT(*) FROM {TEST_PG_SCHEMA}.{table}")
             pg_count = cur.fetchone()[0]

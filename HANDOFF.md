@@ -5,8 +5,8 @@ Read this at the start of every session, then `CLAUDE.md`.
 ## Where we are (last updated 2026-05-27)
 
 ### Roadmap state (`roadmap/<lane>/`)
-- **completed/**: infra 001–007, 008 (MLflow deployment), 009 (custom Docker images), 011 (MLB pybaseball→Iceberg), 043 (CI fix), 044 (secret rotation)
-- **tests_written/**: 012 (MLB Iceberg→Postgres — tests written, impl present, k3s pending)
+- **completed/**: infra 001–007, 008 (MLflow deployment), 009 (custom Docker images), 011 (MLB pybaseball→Iceberg), 012 (MLB Iceberg→Postgres), 043 (CI fix), 044 (secret rotation)
+- **tests_written/**: empty
 - **planned/**: 013 (raw→dbt marts), 014 (gold→MLflow), 025 (cross-sport schedule), 038–042 (polish)
 - **backlog/**: 010 (GitHub Actions), 015–024 (NFL/NBA/NHL verticals), 045 (MLB Baseball Savant Statcast API)
 - **active/**, **validating/**, **blocked/**: empty
@@ -32,22 +32,24 @@ Key fixes required to get 011 green:
 - Added `CATALOG_S3_PATH__STYLE__ACCESS=true` to iceberg-rest deployment (fixes virtual-hosted URL errors)
 - Updated tests to use `local[*]` Spark mode (avoids client-mode reverse-connectivity issues in k3s)
 
-## Story 012 — tests_written (k3s pending)
-- Tests: `tests/validation/test_012_mlb_load_to_postgres.py`
-- Impl: `src/domains/mlb/load/iceberg_to_postgres.py`, updated DAG `dags/mlb/mlb_ingestion_dag.py`
-- Docker: `psycopg2-binary` + `sqlalchemy>=2.0` added to `docker/ingestion-spark/Dockerfile`
-- k3s tests use synthetic seed data (no Fangraphs dep), isolated namespace `mlb_ci_012` / schema `raw_mlb_ci_012`
-- Postgres password fetched from K8s secret `postgresql` key `postgres-password` at runtime
-- **Next: run k3s tests** → if pass, move to `validating/` (then `completed/` when k3s confirmed)
+## Story 012 — COMPLETED ✓
+All 17 k3s tests passed (2026-05-27). Schema, tables, row counts, metadata columns, and idempotency all verified.
+
+Key design notes:
+- Reads Iceberg via Spark, writes to Postgres via pandas `.to_sql()` + SQLAlchemy (no Spark JDBC)
+- `psycopg2-binary` + `sqlalchemy>=2.0` in the ingestion-spark Docker image
+- k3s tests use synthetic seed data in isolated namespace `mlb_ci_012` / schema `raw_mlb_ci_012`
+- Fixture runs seed + initial load + reload (3 pods total); idempotency tests just query Postgres
+- Pod timeout 900s (pods take 5-20 min on ARM64 Raspberry Pi cluster)
 
 ## Story 045 — backlog
 Baseball Savant Statcast leaderboard API + MLB Stats API to replace bref dependency long-term.
 See `roadmap/backlog/045-mlb-stats-api-source.md` for endpoints and acceptance criteria.
 
 ## Next actions (in order)
-1. Run `pytest tests/validation/test_012_mlb_load_to_postgres.py -m k3s -v --tb=short` against the cluster.
-2. If pass → move 012 to `validating/` (impl already present), commit, then run again to confirm → `completed/`.
-3. Start story 013 (Iceberg→dbt marts) tests-first.
+1. Start story 013 (MLB raw→dbt marts) tests-first — spec is in `roadmap/planned/`.
+2. Write ALL tests for 013 (unit/structural + k3s integration) before any implementation.
+3. After 013 is green: story 014 (gold→MLflow), then 025 (cross-sport schedule), then polish (038–042).
 
 ## Production DAG note
 `dags/mlb/mlb_ingestion_dag.py` still hardcodes `MINIO_ACCESS_KEY: "minioadmin"` — this is wrong for production. The correct credentials must be injected from K8s secret at DAG runtime (not hardcoded). Fix before any production run.
