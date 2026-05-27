@@ -11,8 +11,8 @@ from src.common.spark import pandas_schema_to_spark, sanitize_for_spark
 
 
 def fetch_batting_stats(season: int) -> pd.DataFrame:
-    """Fetch season batting stats using pybaseball."""
-    return pybaseball.batting_stats(season)
+    """Fetch season batting stats from Baseball Reference via pybaseball."""
+    return pybaseball.batting_stats_bref(season)
 
 
 def ingest_batting(
@@ -26,7 +26,7 @@ def ingest_batting(
     clean = sanitize_for_spark(pdf)
     df = spark.createDataFrame(clean, schema=pandas_schema_to_spark(clean))
     df = df.withColumn("ingested_at", F.lit(datetime.utcnow().isoformat()))
-    df = df.withColumn("source", F.lit("pybaseball.batting_stats"))
+    df = df.withColumn("source", F.lit("pybaseball.batting_stats_bref"))
     df = df.withColumn("season", F.lit(season))
 
     df.writeTo(table).using("iceberg").partitionedBy("season").createOrReplace()
