@@ -7,7 +7,7 @@ import pybaseball
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
-from src.common.spark import sanitize_for_spark
+from src.common.spark import pandas_schema_to_spark, sanitize_for_spark
 
 
 def fetch_pitching_stats(season: int) -> pd.DataFrame:
@@ -23,7 +23,8 @@ def ingest_pitching(
     if pdf.empty:
         return
 
-    df = spark.createDataFrame(sanitize_for_spark(pdf))
+    clean = sanitize_for_spark(pdf)
+    df = spark.createDataFrame(clean, schema=pandas_schema_to_spark(clean))
     df = df.withColumn("ingested_at", F.lit(datetime.utcnow().isoformat()))
     df = df.withColumn("source", F.lit("pybaseball.pitching_stats"))
     df = df.withColumn("season", F.lit(season))
