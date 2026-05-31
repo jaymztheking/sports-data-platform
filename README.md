@@ -53,6 +53,8 @@ make tf-plan
 make tf-apply
 ```
 
+See [docs/services.md](docs/services.md) for all cluster service URLs and credentials.
+
 ## Project Structure
 
 ```
