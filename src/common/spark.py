@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import pandas as pd
 from pyspark.sql import SparkSession
@@ -40,7 +42,7 @@ _DTYPE_MAP = {
 }
 
 
-def _spark_type_for(dtype):  # type: ignore[type-arg]
+def _spark_type_for(dtype: Any) -> Any:
     key = str(dtype)
     if key.startswith("datetime64"):
         return TimestampType()
@@ -86,7 +88,7 @@ def sanitize_for_spark(pdf: pd.DataFrame) -> pd.DataFrame:
             pdf[col] = pdf[col].astype(object)      # handled in pass 2
 
     # Pass 2: object columns → plain str (or None for missing)
-    def _to_str_or_none(x):
+    def _to_str_or_none(x: Any) -> str | None:
         if x is None:
             return None
         try:

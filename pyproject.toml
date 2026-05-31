@@ -61,6 +61,8 @@ disable_error_code = ["import-untyped"]
 module = [
     "boto3",
     "boto3.*",
+    "numpy",
+    "numpy.*",
     "pandas",
     "pandas.*",
     "pybaseball",
