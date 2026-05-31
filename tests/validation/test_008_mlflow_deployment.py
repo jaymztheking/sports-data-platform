@@ -34,7 +34,9 @@ class TestMlflowDeployment:
     def test_experiments_persist(self, http):
         """AC: Experiment runs persist across restarts — REST API reads from PostgreSQL backend."""
         url = os.environ.get("MLFLOW_URL", "http://192.168.50.231:30500")
-        resp = http.get(f"{url}/api/2.0/mlflow/experiments/search", params={"max_results": 10}, timeout=10)
+        resp = http.get(
+            f"{url}/api/2.0/mlflow/experiments/search", params={"max_results": 10}, timeout=10
+        )
         assert resp.status_code == 200, f"MLflow experiments API returned {resp.status_code}"
         data = resp.json()
         assert "experiments" in data, "MLflow experiments API did not return experiments list"

@@ -16,7 +16,6 @@ import base64
 import json
 import os
 import subprocess
-import sys
 
 import pytest
 
@@ -97,7 +96,9 @@ class TestMlbLoadStructure:
         fn = _func(tree, "load_all_to_postgres")
         args = fn.args.args
         defaults = fn.args.defaults
-        param_defaults = {args[len(args) - len(defaults) + i].arg: d for i, d in enumerate(defaults)}
+        param_defaults = {
+            args[len(args) - len(defaults) + i].arg: d for i, d in enumerate(defaults)
+        }
         assert "iceberg_ns" in param_defaults, "iceberg_ns must have a default"
         assert "pg_schema" in param_defaults, "pg_schema must have a default"
         assert ast.literal_eval(param_defaults["iceberg_ns"]) == "iceberg.mlb", (
@@ -325,7 +326,9 @@ def postgres_load(request):
     seed_result = _run_pod(_SEED_DRIVER, seed_pod, timeout=900)
     _delete_pod(seed_pod)
     if seed_result.returncode != 0:
-        pytest.fail(f"Seed pod failed:\nSTDOUT:\n{seed_result.stdout}\nSTDERR:\n{seed_result.stderr}")
+        pytest.fail(
+            f"Seed pod failed:\nSTDOUT:\n{seed_result.stdout}\nSTDERR:\n{seed_result.stderr}"
+        )
     iceberg_counts = None
     for line in seed_result.stdout.splitlines():
         if line.startswith("SEED_COUNTS="):
@@ -338,7 +341,9 @@ def postgres_load(request):
     load_result = _run_pod(_LOAD_DRIVER, load_pod, timeout=900)
     _delete_pod(load_pod)
     if load_result.returncode != 0:
-        pytest.fail(f"Load pod failed:\nSTDOUT:\n{load_result.stdout}\nSTDERR:\n{load_result.stderr}")
+        pytest.fail(
+            f"Load pod failed:\nSTDOUT:\n{load_result.stdout}\nSTDERR:\n{load_result.stderr}"
+        )
 
     # Run loader a second time to verify idempotency (replace semantics, no row duplication).
     reload_pod = "mlb-ci-012-reload"
@@ -346,7 +351,9 @@ def postgres_load(request):
     reload_result = _run_pod(_LOAD_DRIVER, reload_pod, timeout=900)
     _delete_pod(reload_pod)
     if reload_result.returncode != 0:
-        pytest.fail(f"Reload pod failed:\nSTDOUT:\n{reload_result.stdout}\nSTDERR:\n{reload_result.stderr}")
+        pytest.fail(
+            f"Reload pod failed:\nSTDOUT:\n{reload_result.stdout}\nSTDERR:\n{reload_result.stderr}"
+        )
 
     # Connect to Postgres locally via NodePort.
     pg_pwd = _postgres_env()["POSTGRES_PASSWORD"]
@@ -445,5 +452,6 @@ class TestMlbLoadIntegration:
             cur.execute(f"SELECT COUNT(*) FROM {TEST_PG_SCHEMA}.{table}")
             pg_count = cur.fetchone()[0]
         assert pg_count == iceberg_counts[table], (
-            f"{table}: after reload, Postgres has {pg_count} rows (expected {iceberg_counts[table]} — duplicate rows?)"
+            f"{table}: after reload, Postgres has {pg_count} rows "
+            f"(expected {iceberg_counts[table]} — duplicate rows?)"
         )

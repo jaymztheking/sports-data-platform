@@ -379,7 +379,9 @@ spark.stop()
 """
 
 
-def _run_in_ingestion_pod(script: str, pod_name: str, timeout: int = 600) -> subprocess.CompletedProcess:
+def _run_in_ingestion_pod(
+    script: str, pod_name: str, timeout: int = 600
+) -> subprocess.CompletedProcess:
     """Run a Python script in a temporary ingestion-spark pod and return its result."""
     env_args = [f"--env={k}={v}" for k, v in {**_INGEST_ENV_BASE, **_minio_env()}.items()]
     # imagePullSecrets must be injected via --overrides since kubectl run has no --pull-secret flag.
