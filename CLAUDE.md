@@ -1,51 +1,63 @@
 # CLAUDE.md
 
-> **Start every session by reading `HANDOFF.md`** — it holds the current roadmap state, what's in flight, and the next actions. This file holds the durable rules.
+> **Start every session by reading `HANDOFF.md`** — it holds the current board state and the next action. This file holds the durable rules.
 
 ## Project
 
-Sports data platform — medallion architecture for NFL, MLB, NBA, NHL analytics. K3s cluster on 6 Raspberry Pis (ARM64). See README.md for full architecture.
+An **NFL fantasy-football data platform**, built as a portfolio piece. dbt is the center of gravity. It ingests nflverse data with `nflreadpy`, transforms it through a medallion dbt project, and produces marts that help with fantasy decisions (weekly scoring, usage/opportunity, matchups, waiver targets). It runs and refreshes weekly during the season.
 
-## Board State
+See `README.md` for architecture and how-to-run.
 
-**Infrastructure stories** stand: 001–007 completed, 008–009 deployed and in `validating/`, 010 (GitHub Actions) deferred to `backlog/`.
+## The one rule that matters: cohesion over volume
 
-**Pipeline stories (011–025)** are **functional units** — each is one source-to-destination hop in the data pipeline and owns the code, orchestration, and tests needed to prove that hop works:
+A previous version of this repo "became a pile of Claude-generated code that was not cohesive." The root cause was **infrastructure weight** — Spark/Iceberg/MinIO/Airflow/MLflow/k3s were all stood up before any dbt value existed, and the code sprawled. We are deliberately inverting that: **ship working data products on light local tooling first; add self-hosted infra last.**
 
-- 011 MLB pybaseball→Iceberg: tests written, implementation present, local tier green → in `validating/` (awaiting k3s run)
-- 012–014 MLB (Iceberg→Postgres, raw→dbt marts, gold→MLflow): **no implementation** — cleared in the teardown; start from tests-first when worked. In `planned/`
-- 015–018 NFL, 019–021 NBA, 022–024 NHL: same ingest→load→transform(→ML) pattern, no code yet — `backlog/`
-- 025 cross-sport: per-sport schedule marts → unified `fct_daily_schedule` (in `planned/`)
+### Collaboration protocol (how we work)
+1. **One story = one functional unit = one feature branch = one PR.** Nothing lands on `main` except through a reviewed PR. `main` is branch-protected.
+2. **TDD-first.** Write the story's tests / dbt contracts before implementation.
+3. **Division of labor (default):** Claude scaffolds the skeleton (file stubs, `sources.yml` / contract YAML, one *reference* model or test). **James hand-writes the core SQL/Python.** Then Claude reviews and they iterate. **Claude does not bulk-generate models/logic across a story** unless James explicitly asks for a full draft. This is the anti-"pile" guardrail — respect it.
+4. Keep PRs small and legible. Prefer a working thin slice over a broad half-built layer.
 
-Only code backing a `validating`/`completed`/`active` story exists in the repo. Implementation for `planned`/`backlog` stories is cleared until a live story's tests drive it back in.
+## Architecture (light on purpose)
 
-**Polish stories (038–042)** in `planned/` are non-pipeline deliverables (sqlfluff, architecture docs, setup guide, README, CI verification) — tackled after the verticals.
-
-### Story model (enforced)
-- **Every story has a functional goal confirmed by tests** — never a tests-only story, never an implementation-only story. Implementation and its validation live together.
-- A functional unit is **one source → one destination** for a pipeline part (e.g. pybaseball → Iceberg). Do not split a hop's code, orchestration, and tests into separate stories. Do not split sub-layers within one tool/hop (dbt staging+marts is one unit).
-- Each story's acceptance criteria group into: **Implementation**, **Validation — unit/structural** (runs locally, no cluster), and **Validation — k3s integration / data contract** (marked `pytest.mark.k3s`, verifies data actually landed at the destination with contract assertions: schema/metadata columns, partition scheme, row counts, not-null keys).
-- **The story is the unit of cohesion, not the test file.** A story owns whatever tests prove it works, spread across `tests/unit/`, `tests/integration/`, `tests/validation/` and across as many files as makes sense. No prescribed file/class count — the rule is only that every test belongs to a story and every story is fully proven by its tests. Integration tests carry the `k3s` marker; unit/structural tests do not.
-- **TDD: write the tests first.** Starting a story means first writing ALL of its tests — unit/structural, integration, and data-contract — and confirming they cover every acceptance criterion (and fail for the right reason) BEFORE writing implementation. Implementation is done when those tests pass; do not add scope the tests don't demand. All pipeline stories start from no code (implementation for non-active stories is cleared), so pure red-green applies.
-
-### Lifecycle (swim lanes track the next action)
 ```
-planned        spec / ACs only, nothing written
-tests_written  tests written first, implementation NOT yet complete
-active         currently being worked (WIP)
-validating     tests AND implementation both written; local tier green, k3s pending/running
-               (bounces back here if k3s fails)
-completed      k3s integration passed
-blocked        waiting on a dependency/decision
-backlog        deferred, not on the near-term radar
+nflreadpy (Polars ingest, hand-coded Python)
+  ├─ dev/ci  → Parquet in data/raw/ (committed sample in data/samples/ for CI)
+  └─ prod    → k3s CronJob loads raw_nfl.* tables in Postgres
+        ↓  dbt sources — the same source() refs resolve in each engine
+   staging (views) → intermediate (views) → marts (tables, contracts enforced)
+        dev  → local nfl.duckdb        (dbt-duckdb)
+        ci   → :memory: DuckDB, sample  (dbt-duckdb, ephemeral, every PR)
+        prod → k3s PostgreSQL           (dbt-postgres)
+        ↓
+   Self-hosted BI at *.sports.data
 ```
-- **Definition of done:** all non-k3s tests pass locally AND the story's k3s integration tests pass against the live cluster. A story enters `validating/` only when both gates are met (tests + implementation written, local tier green); it reaches `completed/` only after k3s integration passes.
+
+**Cross-adapter is deliberate.** dev/ci use DuckDB, prod uses Postgres. The friction (contract `data_type` names, a few SQL functions) is isolated: contracts use the portable type subset; CI validates on DuckDB, and the prod-deploy story validates the same contracts on Postgres so drift can't reach prod silently.
 
 ## Conventions
 
-- Package manager: uv
-- Linting: ruff + mypy (strict, with third-party ignores)
-- Tests: pytest, `tests/unit/` for unit, `tests/validation/` for story acceptance
-- IaC: Terraform + Helm in `infra/`
-- Custom agents: `.claude/agents/test-writer.md`, `.claude/agents/scrum-master.md`
-- Roadmap swim lanes: `roadmap/{backlog,planned,tests_written,active,validating,blocked,completed}/` (see Lifecycle above)
+- Package manager: **uv**. Python 3.11–3.13.
+- Python lint/type: **ruff** + **mypy** (strict, third-party ignores in `pyproject.toml`).
+- SQL lint: **sqlfluff** (dbt templater).
+- Tests: **pytest** for Python; **dbt tests + dbt unit tests + contracts** for models. `@pytest.mark.k3s` marks prod/cluster tests (skipped in CI).
+- Ingestion library: **`nflreadpy`** (the older `nfl_data_py` is deprecated — do not use it).
+- dbt env differences = connection + schema only, via `profiles.yml` targets + a `generate_schema_name` override keyed on `target.name`.
+
+## Roadmap / story model
+
+Stories live in `roadmap/` swim lanes and each is one **functional unit** (one source→destination hop, or one cohesive deliverable).
+
+```
+roadmap/
+  backlog/       deferred, not on the near-term radar
+  planned/       spec / acceptance criteria only, nothing written
+  tests_written  tests written first, implementation not yet complete
+  active/        currently being worked (WIP)
+  validating/    tests + implementation done; local green, prod/k3s pending
+  completed/     done and validated
+  blocked/       waiting on a dependency/decision
+```
+
+- **Definition of done:** the story's tests pass (local tier always; the k3s tier for prod stories once the cluster runs). A story moves to `completed/` only when its acceptance criteria are met and proven by tests.
+- Custom agents: `.claude/agents/scrum-master.md` (reports lane moves — does not move files itself) and `.claude/agents/test-writer.md` (drafts acceptance tests from a story's ACs).
