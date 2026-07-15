@@ -1,79 +1,60 @@
-# Sports Data Platform
+# NFL Fantasy Football Data Platform
 
-Modern data platform for sports analytics across NFL, MLB, NBA, and NHL, built on a medallion architecture with data mesh domain separation.
+A portfolio data platform for fantasy football, centered on **dbt**. It ingests
+[nflverse](https://github.com/nflverse) data with `nflreadpy`, models it through a
+medallion dbt project, and produces marts that help with real fantasy decisions —
+weekly scoring, usage/opportunity, matchups, and waiver targets — refreshed weekly
+during the season.
+
+It is intentionally **light**: the value (dbt models + data contracts) comes first,
+and self-hosted infrastructure is added only at the end.
+
+## Highlights (what this repo demonstrates)
+
+- **dbt at the center** — medallion layering (staging → intermediate → marts) with
+  enforced **data contracts**, source freshness, generic + `dbt_expectations` tests,
+  and **dbt unit tests** on hand-coded fantasy-scoring logic.
+- **Real dev/prod environment separation in dbt** — three targets that differ only by
+  connection + schema (`generate_schema_name` keyed on `target.name`).
+- **CI/CD + branch protection** — every PR runs lint, type-check, tests, sqlfluff, and a
+  full `dbt build` against committed sample data on an ephemeral DuckDB.
+- **Cross-adapter portability** — the same models run on DuckDB (dev/ci) and Postgres (prod).
 
 ## Architecture
 
 ```
-  MacBook Air (dev)                    K3s Cluster (6x Raspberry Pi, ARM64)
-  ┌──────────────────┐    git push     ┌─────────────────────────────────────────┐
-  │ Python code      │───────────────> │ GitHub Actions (self-hosted runner)     │
-  │ dbt models       │                 │   └─ terraform apply                   │
-  │ Terraform configs│                 │                                         │
-  └──────────────────┘                 │ Services:                               │
-                                       │  ├── PostgreSQL (silver/gold + meta)    │
-                                       │  ├── MinIO (bronze object storage)      │
-                                       │  ├── Iceberg REST Catalog               │
-                                       │  ├── Spark (master + workers)           │
-                                       │  ├── Airflow (webserver + scheduler)    │
-                                       │  └── MLflow (tracking server)           │
-                                       └─────────────────────────────────────────┘
+nflreadpy (Polars ingest)
+  ├─ dev/ci  → Parquet in data/raw/   (committed sample in data/samples/ for CI)
+  └─ prod    → k3s CronJob loads raw_nfl.* in Postgres
+        ↓  dbt sources (same source() refs resolve in each engine)
+   staging (views) → intermediate (views) → marts (tables, contracts enforced)
+        dev  → local nfl.duckdb        (dbt-duckdb)
+        ci   → :memory: DuckDB, sample  (dbt-duckdb, ephemeral, per PR)
+        prod → k3s PostgreSQL           (dbt-postgres)
+        ↓
+   Self-hosted BI at *.sports.data
 ```
 
-**Data Flow**: APIs (pybaseball, etc.) → PySpark → Iceberg/MinIO → Loader → Postgres → dbt → Gold tables → MLflow
+| Environment | Engine | dbt adapter | Data source | Schema |
+|-------------|--------|-------------|-------------|--------|
+| `dev`  | local DuckDB file | `dbt-duckdb`  | `data/raw/*.parquet`     | `dev_*` |
+| `ci`   | DuckDB `:memory:` | `dbt-duckdb`  | `data/samples/*.parquet` | default |
+| `prod` | k3s PostgreSQL    | `dbt-postgres`| `raw_nfl.*` tables       | `staging` / `marts` |
 
-## Tech Stack
+## Getting started (local dev)
 
-| Layer | Technology |
-|-------|-----------|
-| Orchestration | Apache Airflow |
-| Ingestion | PySpark + pybaseball/nfl-data-py/nba-api |
-| Bronze Storage | Apache Iceberg on MinIO |
-| Transformation | dbt (PostgreSQL) |
-| Serving | PostgreSQL |
-| ML | MLflow + XGBoost |
-| Infrastructure | K3s, Terraform, Helm |
-| CI/CD | GitHub Actions (self-hosted ARM64 runner) |
-
-## Quick Start
+> Requires [uv](https://docs.astral.sh/uv/). Populated end-to-end from `S003` onward.
 
 ```bash
-# Install dependencies
-make install
-
-# Run linting
-make lint
-
-# Run tests
-make test
-
-# Deploy infrastructure (requires K3s cluster)
-make tf-init
-make tf-plan
-make tf-apply
+uv sync --extra dbt --extra dev          # install deps
+# (S003+) pull data → data/raw/*.parquet:
+uv run python -m nfl.ingest.weekly --season 2025
+cd dbt_project
+uv run dbt deps
+uv run dbt build --target dev            # build nfl.duckdb, run tests + contracts
 ```
 
-See [docs/services.md](docs/services.md) for all cluster service URLs and credentials.
+## Status
 
-## Project Structure
-
-```
-├── infra/terraform/     # Terraform configs for K3s deployment
-├── infra/helm-values/   # Helm chart value overrides
-├── docker/              # Custom Docker images (ARM64)
-├── src/common/          # Shared config, Spark, Postgres, MinIO utilities
-├── src/domains/mlb/     # MLB ingestion, loaders, ML
-├── src/domains/nfl/     # NFL (planned)
-├── src/domains/nba/     # NBA (planned)
-├── src/domains/nhl/     # NHL (planned)
-├── dags/                # Airflow DAGs per sport
-├── dbt_project/         # dbt models (staging → marts)
-└── tests/               # Unit and integration tests
-```
-
-## Sports Domains
-
-- **MLB** (active): Statcast, batting/pitching stats, schedules via pybaseball
-- **NFL** (planned): Play-by-play, weekly stats via nfl-data-py
-- **NBA** (planned): Player stats, game logs via nba-api
-- **NHL** (planned): Game/player stats via nhl-api-py
+Early build. See `HANDOFF.md` for the current board state and `roadmap/` for the
+story backlog. `CLAUDE.md` documents the durable rules and collaboration protocol.

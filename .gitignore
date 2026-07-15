@@ -26,5 +26,17 @@ dbt_project/target/
 dbt_project/dbt_packages/
 dbt_project/logs/
 
+# DuckDB (local dev warehouse)
+*.duckdb
+*.duckdb.wal
+
+# Data — raw pulls are regenerated; committed samples are the exception
+data/raw/*.parquet
+
+# Caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
 # OS
 .DS_Store
