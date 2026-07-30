@@ -1,0 +1,27 @@
+nfl:
+  target: dev
+  outputs:
+    # Local development — persistent DuckDB file. Schema `dev`.
+    dev:
+      type: duckdb
+      path: "{{ env_var('NFL_DUCKDB_PATH', 'nfl.duckdb') }}"
+      schema: dev
+      threads: 4
+
+    # CI — ephemeral in-memory DuckDB, rebuilt from scratch every run. Schema `ci`.
+    ci:
+      type: duckdb
+      path: ":memory:"
+      schema: ci
+      threads: 4
+
+    # Prod — PostgreSQL on k3s (S011+). Config comes from env_var only; no secrets in repo.
+    prod:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST') }}"
+      port: "{{ env_var('POSTGRES_PORT', '5432') | as_number }}"
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      dbname: "{{ env_var('POSTGRES_DB') }}"
+      schema: "{{ env_var('POSTGRES_SCHEMA', 'marts') }}"
+      threads: 4
