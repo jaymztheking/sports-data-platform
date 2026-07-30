@@ -22,18 +22,19 @@ A previous version of this repo "became a pile of Claude-generated code that was
 
 ```
 nflreadpy (Polars ingest, hand-coded Python)
-  ├─ dev/ci  → Parquet in data/raw/ (committed sample in data/samples/ for CI)
-  └─ prod    → k3s CronJob loads raw_nfl.* tables in Postgres
+  ├─ dev  → Parquet in data/raw/ (committed sample in data/samples/ for CI)
+  └─ prod → k3s CronJob loads raw_nfl.* tables in Postgres
         ↓  dbt sources — the same source() refs resolve in each engine
    staging (views) → intermediate (views) → marts (tables, contracts enforced)
-        dev  → local nfl.duckdb        (dbt-duckdb)
-        ci   → :memory: DuckDB, sample  (dbt-duckdb, ephemeral, every PR)
-        prod → k3s PostgreSQL           (dbt-postgres)
+        dev  → local nfl.duckdb   (dbt-duckdb)
+        prod → k3s PostgreSQL     (dbt-postgres)
         ↓
    Self-hosted BI at *.sports.data
 ```
 
-**Cross-adapter is deliberate.** dev/ci use DuckDB, prod uses Postgres. The friction (contract `data_type` names, a few SQL functions) is isolated: contracts use the portable type subset; CI validates on DuckDB, and the prod-deploy story validates the same contracts on Postgres so drift can't reach prod silently.
+**Two environments, not three. CI is a mechanism, not an environment.** There are exactly two dbt targets — `dev` (DuckDB) and `prod` (Postgres). CI is the promotion gate between them: on every PR it runs the **`dev`** target ephemerally (`NFL_DUCKDB_PATH=:memory:`) against the committed sample, and it must pass before code can merge and reach prod. Do not add a `ci` target.
+
+**Cross-adapter is deliberate.** dev uses DuckDB, prod uses Postgres. The friction (contract `data_type` names, a few SQL functions) is isolated: contracts use the portable type subset; CI validates the build on DuckDB, and the prod-deploy story validates the same contracts on Postgres so drift can't reach prod silently.
 
 ## Conventions
 

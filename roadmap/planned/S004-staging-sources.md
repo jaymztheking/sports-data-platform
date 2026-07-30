@@ -19,7 +19,7 @@ hand-writes the staging SQL; Claude scaffolds `_nfl__sources.yml` + one referenc
 - [ ] `_nfl__staging.yml` — column tests (not_null/unique on keys)
 
 ### Validation — unit / structural
-- [ ] `dbt build --target ci` on sample data: staging views build, tests pass
+- [ ] `dbt build --target dev` on sample data (`NFL_DUCKDB_PATH=:memory:`, the CI path): staging views build, tests pass
 - [ ] source freshness config parses
 
 ## Definition of Done

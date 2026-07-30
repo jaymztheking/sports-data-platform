@@ -20,7 +20,7 @@ contract YAML + one reference dbt unit test. Scoring configurable via a seed.
 - [ ] `dbt` **unit test(s)** on the scoring math (fixed inputs → known points)
 
 ### Validation — unit / structural
-- [ ] `dbt build --target ci` builds the mart, contract holds, generic + unit tests pass
+- [ ] `dbt build --target dev` (`NFL_DUCKDB_PATH=:memory:`, the CI path) builds the mart, contract holds, generic + unit tests pass
 - [ ] `dbt_expectations` range check on points
 
 ## Definition of Done

@@ -1,18 +1,15 @@
 nfl:
+  # Two environments — dev (DuckDB) and prod (Postgres). CI is not a third
+  # environment: it is the PR gate that runs this same `dev` target ephemerally
+  # by setting NFL_DUCKDB_PATH=:memory: (see .github/workflows), proving the
+  # build green before code can promote to prod.
   target: dev
   outputs:
-    # Local development — persistent DuckDB file. Schema `dev`.
+    # Local development — persistent DuckDB file (or :memory: when CI sets the env var).
     dev:
       type: duckdb
       path: "{{ env_var('NFL_DUCKDB_PATH', 'nfl.duckdb') }}"
       schema: dev
-      threads: 4
-
-    # CI — ephemeral in-memory DuckDB, rebuilt from scratch every run. Schema `ci`.
-    ci:
-      type: duckdb
-      path: ":memory:"
-      schema: ci
       threads: 4
 
     # Prod — PostgreSQL on k3s (S011+). Config comes from env_var only; no secrets in repo.
