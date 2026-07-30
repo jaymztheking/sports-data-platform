@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: stg_nfl__hello
+    description: >
+      Proving model for the S002 scaffold. Exists only to confirm `dbt build`
+      and `dbt test` run green on the dev target (incl. the CI :memory: run).
+      Replaced by real
+      staging models once ingestion lands (S003/S004).
+    columns:
+      - name: id
+        description: Constant primary key for the single proving row.
+        data_tests:
+          - not_null
+          - unique

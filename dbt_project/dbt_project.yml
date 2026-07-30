@@ -1,0 +1,27 @@
+name: 'nfl'
+version: '1.0.0'
+config-version: 2
+
+# profiles.yml lives alongside this file; invoke with --profiles-dir dbt_project
+profile: 'nfl'
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+snapshot-paths: ["snapshots"]
+analysis-paths: ["analyses"]
+
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+# Layer materializations (the medallion spine). Every model carries the `nfl` tag.
+models:
+  nfl:
+    +tags: ["nfl"]
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table

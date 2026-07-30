@@ -25,6 +25,7 @@ infra/terraform/terraform.tfvars
 dbt_project/target/
 dbt_project/dbt_packages/
 dbt_project/logs/
+dbt_project/.user.yml
 
 # DuckDB (local dev warehouse)
 *.duckdb

@@ -13,7 +13,7 @@ Extend `.github/workflows/ci.yml`; configure branch protection on `main`.
 ## Acceptance Criteria
 
 ### Implementation
-- [ ] CI jobs: `ruff` + `mypy` + `pytest -m "not k3s"`; `sqlfluff lint`; `dbt deps` + `dbt build --target ci` on `data/samples/`
+- [ ] CI jobs: `ruff` + `mypy` + `pytest -m "not k3s"`; `sqlfluff lint`; `dbt deps` + `dbt build --target dev` with `NFL_DUCKDB_PATH=:memory:` on `data/samples/`
 - [ ] `.pre-commit-config.yaml` gains sqlfluff (dbt templater)
 - [ ] branch protection on `main`: require the CI checks + PR review; block direct pushes
 
