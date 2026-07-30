@@ -8,25 +8,27 @@
 
 **2026-07-15 — S001 merged.** PR #1 (`s001-foundation` → `main`) merged at `12be449`; `main` is now the NFL foundation. `S001` → `completed/`.
 
-**2026-07-29 — S002 in flight.** dbt project scaffolded on branch `s002-dbt-scaffold`: `dbt_project.yml` (layer materializations + `nfl` tag), `profiles.yml` with **two targets** — `dev` (DuckDB) / `prod` (Postgres via `env_var`), `packages.yml` (`dbt_utils`, `dbt_expectations`), `generate_schema_name` keyed on `target.name`, and a proving model `stg_nfl__hello`. **CI is a mechanism, not an environment**: it runs the `dev` target ephemerally (`NFL_DUCKDB_PATH=:memory:`) as the dev→prod gate; there is no `ci` target. `dbt deps`/`parse`/`build` green on `dev` both persistently and on `:memory:`. PR pending.
+**2026-07-30 — S002 merged.** PR #2 (`s002-dbt-scaffold` → `main`) merged at `3c9d560`. dbt project lives in `dbt_project/` with **two targets** — `dev` (DuckDB) / `prod` (Postgres via `env_var`); **CI is the dev→prod gate**, running the `dev` target ephemerally (`NFL_DUCKDB_PATH=:memory:`) — there is no `ci` target. `S002` → `completed/`.
+
+**2026-07-30 — S003 in flight.** Ingest scaffold on branch `s003-ingest-weekly-schedules`: `src/nfl/config.py` (pydantic-settings **reference impl**), `src/nfl/ingest/{weekly,schedules}.py` **stubs** (`fetch_weekly`/`fetch_schedules` raise `NotImplementedError`), and a **skipped reference test** `tests/ingest/test_weekly.py` showing the no-network mock pattern. **James's pickup:** hand-write the `nflreadpy` fetch + Polars transform (add `ingested_at`/`source` cols), wire the `python -m nfl.ingest.*` CLI to write Parquet, commit the `data/samples/` slice, then un-skip + flesh out the tests.
 
 ## Board state
 
 | Lane | Stories |
 |------|---------|
-| validating | `S002` dbt scaffold — local green on `dev` (persistent + `:memory:`), **PR pending** |
-| completed | `S001` foundation |
-| planned | `S003` ingest weekly+schedules · `S004` staging + sources · `S005` `fct_player_week` (first product) · `S006` CI + branch protection |
+| active | `S003` ingest weekly+schedules — scaffold laid, **awaiting James's core Polars** |
+| completed | `S001` foundation · `S002` dbt scaffold |
+| planned | `S004` staging + sources · `S005` `fct_player_week` (first product) · `S006` CI + branch protection |
 | backlog | `S007`–`S010` broaden products · `S011`–`S015` prod on k3s + BI + schedule |
 
 Detailed acceptance criteria live in each `roadmap/<lane>/SNNN-*.md`.
 
 ## Next action
 
-1. Open the **S002** PR (`s002-dbt-scaffold` → `main`); merge once CI green. Then `S002` → `completed/`.
-2. Start **`S003`** (ingest weekly stats + schedules with `nflreadpy` → Parquet in `data/raw/`, sample committed for CI) on a fresh `s003-*` branch. Claude scaffolds the ingest skeleton; James hand-writes the core Polars fetch/transform.
+1. **James:** hand-write the S003 core in `src/nfl/ingest/{weekly,schedules}.py` (nflreadpy fetch + transform + metadata + CLI), commit the `data/samples/` slice, un-skip `tests/ingest/test_weekly.py` and add the schedules test. Then PR `s003-ingest-weekly-schedules` → `main`.
+2. Then `S004` (staging models + `sources.yml` on the ingested Parquet).
 
-Note: S002 CI does not yet run dbt — wiring `dbt build --target dev` (with `NFL_DUCKDB_PATH=:memory:`) into the GitHub workflow is **S006**.
+Note: CI still does not run dbt — that wiring is **S006**.
 
 ## Notes / decisions
 
