@@ -1,6 +1,6 @@
 """Ingest schedules: nflreadpy → data/raw/schedules.parquet.
 
-SCAFFOLD STUB — James writes the core here (S003). Mirrors weekly.py: fill in
+SCAFFOLD STUB — James writes the core here (S003). Mirrors player_stats.py: fill in
 ``fetch_schedules`` with the real `nflreadpy` loader + Polars transform, add the
 ``ingested_at`` / ``source`` metadata columns, and wire ``main`` so
 ``python -m nfl.ingest.schedules --season 2025`` writes

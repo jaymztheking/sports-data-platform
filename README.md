@@ -54,7 +54,8 @@ must pass before code can merge and reach prod.
 ```bash
 uv sync --extra dbt --extra dev          # install deps
 # (S003+) pull data → data/raw/*.parquet:
-uv run python -m nfl.ingest.weekly --season 2025
+uv run python -m nfl.ingest.player_stats --season 2025
+uv run python -m nfl.ingest.schedules --season 2025
 cd dbt_project
 uv run dbt deps
 uv run dbt build --target dev            # build nfl.duckdb, run tests + contracts
