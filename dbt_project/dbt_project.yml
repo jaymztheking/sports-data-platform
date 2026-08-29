@@ -15,6 +15,15 @@ analysis-paths: ["analyses"]
 target-path: "target"
 clean-targets: ["target", "dbt_packages"]
 
+vars:
+  # Games a player must have logged before he is ranked in fct_player_season. Ranking on
+  # per-game points with no floor lets a one-game sample top the board.
+  min_games_for_rank: 6
+  # Overall consensus rank past which nobody is actually drafted. A 12-team league takes
+  # ~180 players, so value_over_ecr beyond this is comparing noise to noise: the board
+  # does not rank WR162 carefully, so any player who merely suited up scores huge there.
+  draftable_ecr_cutoff: 200
+
 # Layer materializations (the medallion spine). Every model carries the `nfl` tag.
 models:
   nfl:

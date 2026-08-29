@@ -43,9 +43,9 @@ materially more history post-draft.
 
 | Lane | Stories |
 |------|---------|
-| active | `S004` staging + sources (PR #4) · `S003A` multi-season history (PR #5, stacked on #4) |
-| completed | `S001` foundation · `S002` dbt scaffold · `S003` ingest · `S003A` history window |
-| planned | **`S005A` `fct_player_season` (draft board — the 09-05 target)** · `S006` CI + branch protection |
+| active | `S005A` `fct_player_season` draft board — built and green, PR open |
+| completed | `S001` foundation · `S002` dbt scaffold · `S003` ingest · `S003A` history window · `S004` staging |
+| planned | `S006` CI + branch protection (post-draft) |
 | deferred | `S005` `fct_player_week` → post-draft (in-season product) |
 | backlog | `S007`–`S010` broaden products · `S011`–`S015` prod on k3s + BI + schedule |
 
