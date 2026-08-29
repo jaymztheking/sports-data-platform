@@ -1,0 +1,52 @@
+version: 2
+
+sources:
+  - name: raw_nfl
+    description: >
+      Raw nflverse extracts landed by `src/nfl/ingest/*` (S003). The same `source()`
+      refs resolve on both engines — that is the whole cross-adapter trick:
+
+        dev  (DuckDB)   — `meta.external_location` below points at Parquet on disk.
+                          `NFL_DATA_DIR` selects which set: `data/raw` locally,
+                          `data/samples` for the committed no-network slice CI uses.
+        prod (Postgres) — `external_location` is a dbt-duckdb-only key and is ignored;
+                          the adapter resolves real `raw_nfl.*` tables loaded by the
+                          k3s CronJob (S011+).
+
+      Paths are relative to the process working directory, so invoke dbt from the repo
+      root: `dbt build --project-dir dbt_project --profiles-dir dbt_project`.
+    meta:
+      external_location: "{{ env_var('NFL_DATA_DIR', 'data/raw') }}/{name}.parquet"
+    loaded_at_field: ingested_at
+    freshness:
+      warn_after: {count: 7, period: day}
+      error_after: {count: 14, period: day}
+
+    tables:
+      - name: player_stats
+        description: >
+          One row per player per week, all positions, REG and POST. 152 columns landed
+          faithfully by ingest; staging picks the fantasy-relevant subset.
+        columns:
+          - name: player_id
+            description: nflverse gsis player id. Not shared with `ff_rankings`.
+
+      - name: schedules
+        description: One row per game (REG + POST), with results for games played.
+        columns:
+          - name: game_id
+            description: nflverse game id, e.g. `2025_01_KC_BUF`.
+
+      - name: ff_rankings
+        description: >
+          FantasyPros consensus draft board via ffverse — the market-cost side of
+          S005A. A live snapshot with no season column, so re-ingest near the draft.
+          Carries every board variant at once (31 `page_type`s x 9 `ecr_type`s:
+          dynasty, best-ball, superflex, redraft), which is why staging filters.
+        # Tighter than the source default: a draft board goes stale in days, not weeks.
+        freshness:
+          warn_after: {count: 2, period: day}
+          error_after: {count: 7, period: day}
+        columns:
+          - name: ecr
+            description: Expert consensus rank. There is no ADP column in this feed.

@@ -24,19 +24,21 @@ are **2026-09-05 (8 days out)**. Two decisions:
    season-grain per-game rates + positional ranks + `load_ff_rankings` ECR join →
    value-over-ECR (the feed has no `adp` column — see S005A). `S005` returns as the in-season product after kickoff.
 
-**S003 actual state** (uncommitted on the branch, ahead of what this file used to say):
-`src/nfl/ingest/player_stats.py` core is **written** (real `nfl.load_player_stats`,
-metadata cols, argparse CLI); `src/nfl/ingest/_common.py` added (`add_metadata` /
-`write_parquet`). Still open: `schedules.py` is a stub, new `ff_rankings.py` not started,
-`tests/ingest/test_player_stats.py` still `pytest.mark.skip`, `data/samples/` empty.
+**2026-08-28 — S003 merged.** PR #3 merged at `580785f`. All three ingest modules run
+(`player_stats`, `schedules`, `ff_rankings`), 20 no-network tests, `data/samples/` slice
+committed, `scripts/make_samples.py` regenerates it. `S003` → `completed/`.
+
+**2026-08-28 — S004 in flight** on `s004-staging-sources`: `raw_nfl` sources +
+`stg_nfl__{player_stats,schedules,ff_rankings}` + `normalize_player_name` macro +
+`.sqlfluff`. Green on both the sample and the full season (22/22), freshness passes.
 
 ## Board state
 
 | Lane | Stories |
 |------|---------|
-| active | `S003` ingest player stats + schedules **+ ff_rankings** — player_stats done, rest open |
-| completed | `S001` foundation · `S002` dbt scaffold |
-| planned | `S004` staging + sources · **`S005A` `fct_player_season` (draft board — the 09-05 target)** · `S006` CI + branch protection |
+| active | `S004` staging + sources — built and green, PR open |
+| completed | `S001` foundation · `S002` dbt scaffold · `S003` ingest |
+| planned | **`S005A` `fct_player_season` (draft board — the 09-05 target)** · `S006` CI + branch protection |
 | deferred | `S005` `fct_player_week` → post-draft (in-season product) |
 | backlog | `S007`–`S010` broaden products · `S011`–`S015` prod on k3s + BI + schedule |
 
@@ -47,13 +49,24 @@ Detailed acceptance criteria live in each `roadmap/<lane>/SNNN-*.md`.
 **Critical path to 2026-09-05 (drafts).** Claude is writing these in full per the rule-3
 suspension; each still lands as its own reviewed PR with tests first.
 
-1. **Finish `S003`** — `schedules.py`, new `ff_rankings.py`, un-skip + extend the ingest
-   tests, commit the `data/samples/` slice. PR → `main`.
-2. **`S004`** — `_nfl__sources.yml` + `stg_nfl__{player_stats,schedules,ff_rankings}`.
-3. **`S005A`** — `fct_player_season` draft board + `scoring_rules.csv` seed.
+1. ~~`S003`~~ merged (PR #3).
+2. **`S004`** — built and green; PR open, needs review/merge.
+3. **`S005A`** — `fct_player_season` draft board + `scoring_rules.csv` seed. **Next build.**
 
-Note: CI still does not run dbt — that wiring is **S006**, and it stays *after* the draft.
-Until then `dbt build --target dev` is run locally as the gate.
+**Carry into S005A — the one place the board can still be silently wrong:**
+`player_join_key + position` is not unique on the draft board (two distinct WRs named
+*Isaiah Williams*). The join must dedupe deliberately, preferring the rostered entry over
+the free agent, with a `unique` test on the mart grain proving it. The name key itself is
+solved — `normalize_player_name` strips generational suffixes and now matches 100% of the
+top-100 2025 producers (before stripping, Mahomes/Cook/Etienne/Pitts fell off the board).
+
+**Run the build:** `NFL_DATA_DIR=data/raw uv run dbt build --project-dir dbt_project
+--profiles-dir dbt_project` from the repo root (paths in `external_location` are relative
+to cwd). CI swaps in `NFL_DATA_DIR=data/samples NFL_DUCKDB_PATH=:memory:`.
+
+Note: CI still does not run dbt (and does not lint `scripts/` or run sqlfluff) — that
+wiring is **S006**, which stays *after* the draft. Until then the local `dbt build` on both
+`data/samples` and `data/raw` is the gate.
 
 ## Notes / decisions
 

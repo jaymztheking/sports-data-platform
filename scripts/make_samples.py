@@ -25,7 +25,10 @@ MAX_WEEK = 4
 # Redraft overall — the board a standard season-long league drafts from. The feed also
 # carries dynasty/best-ball/superflex variants (see ecr_type), which we do not want.
 REDRAFT_OVERALL = "ro"
-TOP_N_RANKINGS = 60
+# Keep the board rows for players who appear in the sampled weeks, so the sample
+# actually exercises the stats <-> board join, plus a few extras for shape. A slice
+# with no overlap would let a broken join pass CI.
+EXTRA_RANKINGS = 20
 
 
 def main() -> int:
@@ -44,12 +47,24 @@ def main() -> int:
     )
     sc.write_parquet(SAMPLES / "schedules.parquet")
 
-    fr = (
-        pl.read_parquet(RAW / "ff_rankings.parquet")
-        .filter(pl.col("ecr_type") == REDRAFT_OVERALL)
-        .sort("ecr")
-        .head(TOP_N_RANKINGS)
+    # Mirrors macros/normalize_player_name.sql — keep the two in step.
+    def norm(col: str) -> pl.Expr:
+        return (
+            pl.col(col)
+            .str.to_lowercase()
+            .str.strip_chars()
+            .str.replace_all(r"[.\'-]", "")
+            .str.replace(r"\s+(jr|sr|iv|iii|ii|v)$", "")
+            .str.strip_chars()
+        )
+
+    sampled_players = ps.select(norm("player_display_name").alias("k"))["k"].unique().to_list()
+    board = pl.read_parquet(RAW / "ff_rankings.parquet").filter(
+        pl.col("ecr_type") == REDRAFT_OVERALL
     )
+    matched = board.filter(norm("player").is_in(sampled_players))
+    extras = board.filter(~norm("player").is_in(sampled_players)).sort("ecr").head(EXTRA_RANKINGS)
+    fr = pl.concat([matched, extras]).sort("ecr")
     fr.write_parquet(SAMPLES / "ff_rankings.parquet")
 
     for name, df in (("player_stats", ps), ("schedules", sc), ("ff_rankings", fr)):
