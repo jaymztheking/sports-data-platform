@@ -1,7 +1,7 @@
 # S004 — Staging + sources (cross-adapter)
 
 **Phase**: 1 — Thin vertical slice
-**Functional unit**: raw Parquet/tables → `stg_nfl__weekly`, `stg_nfl__schedules`
+**Functional unit**: raw Parquet/tables → `stg_nfl__player_stats`, `stg_nfl__schedules`
 
 ## User Story
 As an analyst, I want cleaned, typed staging views so that marts build on stable inputs.
@@ -15,7 +15,7 @@ hand-writes the staging SQL; Claude scaffolds `_nfl__sources.yml` + one referenc
 
 ### Implementation
 - [ ] `models/staging/nfl/_nfl__sources.yml` — `raw_nfl` sources w/ freshness + `external_location` meta for DuckDB
-- [ ] `stg_nfl__weekly.sql`, `stg_nfl__schedules.sql` — typed/renamed/cleaned views
+- [ ] `stg_nfl__player_stats.sql`, `stg_nfl__schedules.sql` — typed/renamed/cleaned views
 - [ ] `_nfl__staging.yml` — column tests (not_null/unique on keys)
 
 ### Validation — unit / structural

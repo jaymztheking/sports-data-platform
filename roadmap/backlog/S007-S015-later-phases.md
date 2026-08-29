@@ -4,10 +4,31 @@ Thin stubs; each becomes its own `SNNN-*.md` with full acceptance criteria when 
 into `planned/`.
 
 ## Phase 2 — Broaden data products (still dev-only DuckDB)
-- **S007 — Ingest pbp + rosters + snap counts + injuries.** More `nflreadpy` modules → Parquet + samples.
-- **S008 — Usage/opportunity intermediates.** `int_` models: target share, air-yards share, red-zone touches, snap %.
+- **S007 — Ingest pbp + rosters + snap counts + injuries.** More `nflreadpy` modules → Parquet
+  + samples: `load_pbp`, `load_rosters_weekly`, `load_snap_counts`, `load_injuries`.
+  Note `pbp` is ~13 MB/season (49k rows × 372 cols) — it needs a real `data/samples/` slice
+  (a couple of games), not a token filter. The other three are <1 MB/season.
+- **S008 — Usage/opportunity intermediates.** `int_` models: target share, air-yards share,
+  red-zone touches, snap %. **Snap % and red-zone touches were split out of S005** — they
+  depend on `snap_counts`/`pbp`, which S007 ingests. Hard dependency: S007 → S008.
 - **S009 — Matchup context marts.** `mart_positional_defense` (fantasy points allowed to each position) + `mart_strength_of_schedule`.
 - **S010 — Waiver/trend marts.** `mart_waiver_targets` (usage spikes) + `mart_player_trends`.
+
+### Ingest scope — which `nflreadpy` loaders we pull
+
+A loader gets ingested only when a named mart needs it. Interesting ≠ in scope.
+
+- **In:** `load_player_stats`, `load_schedules` (S003) · `load_pbp`, `load_rosters_weekly`,
+  `load_snap_counts`, `load_injuries` (S007) · `load_players`, `load_teams` when a dim needs
+  them · `load_depth_charts` (S010, role change = the waiver signal).
+- **Out:** `load_contracts`, `load_combine`, `load_draft_picks`, `load_trades`,
+  `load_officials`, `load_ftn_charting`, `load_pfr_advstats`, `load_nextgen_stats`,
+  `load_participation` — no mart consumes them.
+- **Deliberately out:** `load_ff_opportunity`, `load_ff_rankings`, `load_ff_playerids`.
+  These are nflverse's *precomputed* fantasy analytics (expected points, others' rankings).
+  Ingesting them would make our headline products a wrapper around someone else's model
+  instead of our dbt — `ff_opportunity`'s 159 columns of expected-points modeling is
+  precisely what S008/S010 exist to build.
 
 ## Phase 3 — Prod on simplified k3s + serving + schedule
 - **S011 — Slim infra.** Terraform/Helm = Postgres only + secrets (trim old `infra/terraform/{postgres,main,versions,variables,ingress}.tf`; drop spark/iceberg/minio/airflow/mlflow).
