@@ -28,6 +28,13 @@ are **2026-09-05 (8 days out)**. Two decisions:
 (`player_stats`, `schedules`, `ff_rankings`), 20 no-network tests, `data/samples/` slice
 committed, `scripts/make_samples.py` regenerates it. `S003` → `completed/`.
 
+**2026-08-28 — S003A: history widened to 2022–2025.** Measured what the draft board
+would stand on and found **one season**. Ingest now pulls a configurable window
+(`NFL_HISTORY_START_SEASON`, default 2022): **75,879 player-weeks / 1,139 games**, and the
+average top-50 board player carries **49.4 games** of history instead of ~14. Widening
+further is one env var — deferred to backlog on time, not on merit; James wants
+materially more history post-draft.
+
 **2026-08-28 — S004 in flight** on `s004-staging-sources`: `raw_nfl` sources +
 `stg_nfl__{player_stats,schedules,ff_rankings}` + `normalize_player_name` macro +
 `.sqlfluff`. Green on both the sample and the full season (22/22), freshness passes.
@@ -36,8 +43,8 @@ committed, `scripts/make_samples.py` regenerates it. `S003` → `completed/`.
 
 | Lane | Stories |
 |------|---------|
-| active | `S004` staging + sources — built and green, PR open |
-| completed | `S001` foundation · `S002` dbt scaffold · `S003` ingest |
+| active | `S004` staging + sources (PR #4) · `S003A` multi-season history (PR #5, stacked on #4) |
+| completed | `S001` foundation · `S002` dbt scaffold · `S003` ingest · `S003A` history window |
 | planned | **`S005A` `fct_player_season` (draft board — the 09-05 target)** · `S006` CI + branch protection |
 | deferred | `S005` `fct_player_week` → post-draft (in-season product) |
 | backlog | `S007`–`S010` broaden products · `S011`–`S015` prod on k3s + BI + schedule |
