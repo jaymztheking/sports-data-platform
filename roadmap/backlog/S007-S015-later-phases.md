@@ -4,17 +4,14 @@ Thin stubs; each becomes its own `SNNN-*.md` with full acceptance criteria when 
 into `planned/`.
 
 ## Phase 2 — Broaden data products (still dev-only DuckDB)
-- **S007 — Ingest pbp + rosters + snap counts + injuries.** More `nflreadpy` modules → Parquet
-  **WIDENED 2026-08-29 for the projection stories (S016–S018).** Also pull
-  `load_pfr_advstats` (rush + pass: `ybc_att`, `pressure_pct` — the free O-line proxies),
-  `load_ff_opportunity` (`*_exp` expected points, i.e. production with TD luck stripped),
-  `load_team_stats` (pace + team defence), `load_draft_picks` (rookie draft capital), and
-  the **2026** `load_schedules` (112 of 272 games already priced; all 32 teams covered,
-  median 7 games each — enough for a season-level Vegas signal). Hard dependency:
-  S007 → S016.
-  + samples: `load_pbp`, `load_rosters_weekly`, `load_snap_counts`, `load_injuries`.
-  Note `pbp` is ~13 MB/season (49k rows × 372 cols) — it needs a real `data/samples/` slice
-  (a couple of games), not a token filter. The other three are <1 MB/season.
+- **S007 — promoted to `roadmap/planned/S007-ingest-widening.md` 2026-08-29** (widened the
+  same day for the projection stories S016–S018: `pfr_advstats`, `ff_opportunity`,
+  `team_stats`, `draft_picks`, `depth_charts`, 2026 `schedules`, plus two new non-nflreadpy
+  ADP ingest modules — ESPN and FFC — with dated snapshotting for `ff_rankings`/ESPN ADP).
+  Full acceptance criteria live in that file now; this stub is kept only for the
+  `load_pbp`/`load_rosters_weekly`/`load_injuries` sample-only additions it still owns for
+  S008, and for the "Ingest scope" table below (note: that table's "deliberately out" call
+  on `load_ff_opportunity` is superseded — see the promoted S007 file).
 - **S008 — Usage/opportunity intermediates.** `int_` models: target share, air-yards share,
   red-zone touches, snap %. **Snap % and red-zone touches were split out of S005** — they
   depend on `snap_counts`/`pbp`, which S007 ingests. Hard dependency: S007 → S008.

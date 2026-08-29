@@ -43,11 +43,11 @@ materially more history post-draft.
 
 | Lane | Stories |
 |------|---------|
-| active | `S005A` `fct_player_season` draft board — built and green, PR open |
-| completed | `S001` foundation · `S002` dbt scaffold · `S003` ingest · `S003A` history window · `S004` staging |
-| planned | **`S016`–`S018` our own projections** (features → backtest → model) · `S006` CI + branch protection (post-draft) |
+| active | *(none — `S004` file still sits in `active/` but is merged; needs moving to `completed/`)* |
+| completed | `S001` foundation · `S002` dbt scaffold · `S003` ingest · `S003A` history window · `S004` staging · `S005A` `fct_player_season` draft board |
+| planned | **`S007` ingest widening** (blocks S016) → **`S016`–`S018` our own projections** (features → backtest → model) · `S006` CI + branch protection (post-draft) |
 | deferred | `S005` `fct_player_week` → post-draft (in-season product) |
-| backlog | `S007`–`S010` broaden products · `S011`–`S015` prod on k3s + BI + schedule |
+| backlog | `S008`–`S010` broaden products · `S011`–`S015` prod on k3s + BI + schedule |
 
 Detailed acceptance criteria live in each `roadmap/<lane>/SNNN-*.md`.
 
