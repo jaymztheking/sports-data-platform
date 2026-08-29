@@ -5,6 +5,13 @@ into `planned/`.
 
 ## Phase 2 — Broaden data products (still dev-only DuckDB)
 - **S007 — Ingest pbp + rosters + snap counts + injuries.** More `nflreadpy` modules → Parquet
+  **WIDENED 2026-08-29 for the projection stories (S016–S018).** Also pull
+  `load_pfr_advstats` (rush + pass: `ybc_att`, `pressure_pct` — the free O-line proxies),
+  `load_ff_opportunity` (`*_exp` expected points, i.e. production with TD luck stripped),
+  `load_team_stats` (pace + team defence), `load_draft_picks` (rookie draft capital), and
+  the **2026** `load_schedules` (112 of 272 games already priced; all 32 teams covered,
+  median 7 games each — enough for a season-level Vegas signal). Hard dependency:
+  S007 → S016.
   + samples: `load_pbp`, `load_rosters_weekly`, `load_snap_counts`, `load_injuries`.
   Note `pbp` is ~13 MB/season (49k rows × 372 cols) — it needs a real `data/samples/` slice
   (a couple of games), not a token filter. The other three are <1 MB/season.
@@ -51,3 +58,17 @@ season-over-season features possible: age curves, true breakout-vs-outlier separ
 regression-to-mean priors, and career-arc context. Check ingest runtime and Parquet size
 before going all the way back — 4 seasons is 2.0 MB, so ~25 seasons is likely ~12 MB,
 which is fine locally but worth confirming against the k3s Postgres load path (S011+).
+
+
+---
+
+## Phase 2b — Our own projections (planned 2026-08-29)
+
+Promoted out of backlog into `roadmap/planned/` as **S016 → S017 → S018**. Replaces the
+borrowed ECR rankings with our own forecast. Sequence matters: features, then the
+**backtest harness**, then the model — the scoreboard is built before the thing it scores.
+
+Deferred to a later story: **weekly projections**, built as
+`season baseline × weekly modifier` (opponent, spread, game script, injury). The
+dependency runs season → weekly deliberately, so that Week 1 matchups cannot leak into a
+draft ranking.
