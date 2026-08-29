@@ -1,6 +1,6 @@
 """Ingest per-week player stats: nflreadpy → ``<data_dir>/player_stats.parquet``.
 
-Downloads one season of per-week player stats, stamps provenance columns
+Downloads the configured season window of per-week player stats, stamps provenance columns
 (``ingested_at`` / ``source``), and writes Parquet. Full refresh: every run
 re-downloads the whole season and overwrites the file.
 
@@ -10,7 +10,9 @@ ingest lands the source faithfully.
 
 Run it with::
 
-    python -m nfl.ingest.player_stats --season 2025
+    python -m nfl.ingest.player_stats                    # the whole window (2022-2025)
+    python -m nfl.ingest.player_stats --season 2025      # one season
+    python -m nfl.ingest.player_stats --season 2024 2025 # a subset
 
 Unit tests mock the loader — no network in CI (see tests/ingest/test_player_stats.py).
 """
@@ -29,27 +31,28 @@ SOURCE = "nflreadpy:player_stats"
 FILENAME = "player_stats.parquet"
 
 
-def fetch_player_stats(season: int) -> pl.DataFrame:
-    """Return per-week player stats for ``season`` with metadata columns added."""
-    df = nfl.load_player_stats(seasons=[season], summary_level="week")
+def fetch_player_stats(seasons: list[int]) -> pl.DataFrame:
+    """Return per-week player stats for ``seasons`` with metadata columns added."""
+    df = nfl.load_player_stats(seasons=seasons, summary_level="week")
     df = add_metadata(df, source=SOURCE)
     return df
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Ingest one season of per-week player stats and write it to Parquet."""
+    """Ingest the season window of per-week player stats and write it to Parquet."""
     parser = argparse.ArgumentParser(description="Ingest per-week player stats")
     parser.add_argument(
         "--season",
         type=int,
-        default=settings.default_season,
-        help=f"season year (default: {settings.default_season})",
+        nargs="+",
+        default=settings.default_seasons,
+        help=f"season year(s) (default: {settings.default_seasons})",
     )
     args = parser.parse_args(argv)
 
     df = fetch_player_stats(args.season)
     path = write_parquet(df, settings.data_dir / FILENAME)
-    print(f"{SOURCE} season={args.season}: {df.height} rows → {path}")
+    print(f"{SOURCE} seasons={args.season}: {df.height} rows → {path}")
     return 0
 
 

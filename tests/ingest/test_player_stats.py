@@ -45,7 +45,7 @@ def fake_loader(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
 
 def test_fetch_player_stats_adds_metadata(fake_loader: dict[str, Any]) -> None:
-    out = player_stats.fetch_player_stats(season=2025)
+    out = player_stats.fetch_player_stats(seasons=[2025])
 
     assert {"ingested_at", "source"} <= set(out.columns)
     assert out["source"].to_list() == [player_stats.SOURCE] * 2
@@ -57,20 +57,20 @@ def test_fetch_player_stats_preserves_source_columns_and_rows(
     fake_loader: dict[str, Any],
 ) -> None:
     """Ingest lands the source faithfully — shaping belongs in dbt staging."""
-    out = player_stats.fetch_player_stats(season=2025)
+    out = player_stats.fetch_player_stats(seasons=[2025])
 
     assert set(_fake_frame().columns) <= set(out.columns)
     assert out.height == _fake_frame().height
     assert out["fantasy_points"].to_list() == [12.3, 4.5]
 
 
-def test_fetch_player_stats_requests_weekly_grain_for_the_season(
+def test_fetch_player_stats_requests_weekly_grain_for_the_seasons(
     fake_loader: dict[str, Any],
 ) -> None:
     """Weekly grain is what S005A aggregates for per-game rates and consistency."""
-    player_stats.fetch_player_stats(season=2024)
+    player_stats.fetch_player_stats(seasons=[2023, 2024])
 
-    assert fake_loader["seasons"] == [2024]
+    assert fake_loader["seasons"] == [2023, 2024]
     assert fake_loader["summary_level"] == "week"
 
 
@@ -87,12 +87,24 @@ def test_main_writes_parquet_to_the_configured_data_dir(
     assert pl.read_parquet(target).height == 2
 
 
-def test_main_defaults_to_the_configured_season(
+def test_main_defaults_to_the_whole_history_window(
     fake_loader: dict[str, Any], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """Bare `python -m nfl.ingest.*` pulls every season, not just the latest."""
     monkeypatch.setattr(settings, "data_dir", tmp_path)
-    monkeypatch.setattr(settings, "default_season", 2023)
+    monkeypatch.setattr(settings, "history_start_season", 2022)
+    monkeypatch.setattr(settings, "default_season", 2025)
 
     player_stats.main([])
 
-    assert fake_loader["seasons"] == [2023]
+    assert fake_loader["seasons"] == [2022, 2023, 2024, 2025]
+
+
+def test_main_accepts_multiple_seasons(
+    fake_loader: dict[str, Any], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+
+    player_stats.main(["--season", "2023", "2024"])
+
+    assert fake_loader["seasons"] == [2023, 2024]

@@ -36,3 +36,18 @@ A loader gets ingested only when a named mart needs it. Interesting ≠ in scope
 - **S013 — Weekly schedule.** k3s CronJob, in-season cadence.
 - **S014 — Self-hosted BI.** Evidence.dev (static → nginx) or Metabase at `*.sports.data`. Decide the tool here.
 - **S015 — Deploy workflow + docs.** Self-hosted-runner deploy workflow; architecture docs; README polish.
+
+
+---
+
+## Deferred from S003A (2026-08-28) — deepen the history window
+
+`history_start_season` currently starts at **2022** (4 seasons). That was a time call
+before the 2026-09-05 draft, not a judgement about what is useful. nflverse player stats
+reach back to **1999**, and the knob is a single env var — no code change needed to widen.
+
+Worth doing once the draft board ships, because more history is what makes the
+season-over-season features possible: age curves, true breakout-vs-outlier separation,
+regression-to-mean priors, and career-arc context. Check ingest runtime and Parquet size
+before going all the way back — 4 seasons is 2.0 MB, so ~25 seasons is likely ~12 MB,
+which is fine locally but worth confirming against the k3s Postgres load path (S011+).
