@@ -21,7 +21,8 @@ metadata columns. Also emits a tiny slice into `data/samples/` for CI.
 - [x] `src/nfl/config.py` — pydantic-settings (paths, default season)
 - [ ] `src/nfl/ingest/player_stats.py`, `src/nfl/ingest/schedules.py` — pull via `nflreadpy`, write Parquet, add metadata cols
 - [ ] runnable as `python -m nfl.ingest.player_stats --season <yr>`
-- [ ] committed `data/samples/{player_stats,schedules}.parquet` (small: ~2 teams / few weeks)
+- [ ] `src/nfl/ingest/ff_rankings.py` — `load_ff_rankings` (FantasyPros ECR/ADP), added 2026-08-28 for S005A
+- [ ] committed `data/samples/{player_stats,schedules,ff_rankings}.parquet` (small: ~2 teams / few weeks)
 
 ### Validation — unit / structural
 - [ ] unit tests: metadata columns present, schema/dtypes as expected, writes Parquet (use a fixture/mock, no network in CI)

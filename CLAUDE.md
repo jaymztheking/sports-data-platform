@@ -15,7 +15,8 @@ A previous version of this repo "became a pile of Claude-generated code that was
 ### Collaboration protocol (how we work)
 1. **One story = one functional unit = one feature branch = one PR.** Nothing lands on `main` except through a reviewed PR. `main` is branch-protected.
 2. **TDD-first.** Write the story's tests / dbt contracts before implementation.
-3. **Division of labor (default):** Claude scaffolds the skeleton (file stubs, `sources.yml` / contract YAML, one *reference* model or test). **James hand-writes the core SQL/Python.** Then Claude reviews and they iterate. **Claude does not bulk-generate models/logic across a story** unless James explicitly asks for a full draft. This is the anti-"pile" guardrail — respect it.
+3. **Division of labor — ⚠️ SUSPENDED 2026-08-28 → 2026-09-06.** Fantasy drafts are 2026-09-05; the platform has to be usable by then. Until the restore date **Claude may write core SQL/Python in full**, including whole models and ingest modules. Rules 1, 2 and 4 still bind and are load-bearing — they, not rule 3, are what actually keep this from becoming a pile: every change still arrives as a small reviewed PR with tests written first.
+   **Restore on 2026-09-06** to the standing rule: *Claude scaffolds the skeleton (file stubs, `sources.yml` / contract YAML, one reference model or test); James hand-writes the core SQL/Python; Claude reviews and they iterate; Claude does not bulk-generate models/logic across a story unless James explicitly asks for a full draft.*
 4. Keep PRs small and legible. Prefer a working thin slice over a broad half-built layer.
 
 ## Architecture (light on purpose)

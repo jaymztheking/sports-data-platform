@@ -1,6 +1,7 @@
 # S005 — fct_player_week (first fantasy product)
 
 **Phase**: 1 — Thin vertical slice
+**Status**: ⏸ **Deferred to post-draft (2026-08-28).** Wrong grain for the 2026-09-05 draft — see `S005A-fct-player-season-draft-board.md`. Picks back up as the in-season weekly product once the season starts.
 **Functional unit**: staging → `fct_player_week` mart (contracted)
 
 ## User Story
