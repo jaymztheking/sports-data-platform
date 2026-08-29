@@ -38,7 +38,7 @@ def fake_loader(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
 
 def test_fetch_schedules_adds_metadata(fake_loader: dict[str, Any]) -> None:
-    out = schedules.fetch_schedules(season=2025)
+    out = schedules.fetch_schedules(seasons=[2025])
 
     assert {"ingested_at", "source"} <= set(out.columns)
     assert out["source"].to_list() == [schedules.SOURCE] * 2
@@ -47,7 +47,7 @@ def test_fetch_schedules_adds_metadata(fake_loader: dict[str, Any]) -> None:
 
 
 def test_fetch_schedules_preserves_source_columns_and_rows(fake_loader: dict[str, Any]) -> None:
-    out = schedules.fetch_schedules(season=2025)
+    out = schedules.fetch_schedules(seasons=[2025])
 
     assert set(_fake_frame().columns) <= set(out.columns)
     assert out.height == _fake_frame().height
@@ -55,7 +55,7 @@ def test_fetch_schedules_preserves_source_columns_and_rows(fake_loader: dict[str
 
 
 def test_fetch_schedules_requests_the_given_season(fake_loader: dict[str, Any]) -> None:
-    schedules.fetch_schedules(season=2024)
+    schedules.fetch_schedules(seasons=[2024])
 
     assert fake_loader["seasons"] == [2024]
 
@@ -73,12 +73,24 @@ def test_main_writes_parquet_to_the_configured_data_dir(
     assert pl.read_parquet(target).height == 2
 
 
-def test_main_defaults_to_the_configured_season(
+def test_main_defaults_to_the_whole_history_window(
     fake_loader: dict[str, Any], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """Bare `python -m nfl.ingest.*` pulls every season, not just the latest."""
     monkeypatch.setattr(settings, "data_dir", tmp_path)
-    monkeypatch.setattr(settings, "default_season", 2023)
+    monkeypatch.setattr(settings, "history_start_season", 2022)
+    monkeypatch.setattr(settings, "default_season", 2025)
 
     schedules.main([])
 
-    assert fake_loader["seasons"] == [2023]
+    assert fake_loader["seasons"] == [2022, 2023, 2024, 2025]
+
+
+def test_main_accepts_multiple_seasons(
+    fake_loader: dict[str, Any], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+
+    schedules.main(["--season", "2023", "2024"])
+
+    assert fake_loader["seasons"] == [2023, 2024]

@@ -3,8 +3,8 @@
 CI points ``NFL_DATA_DIR`` at ``data/samples`` so dbt can build against a real-shaped
 but tiny fixture. Run this after a full ingest into ``data/raw``::
 
-    uv run python -m nfl.ingest.player_stats --season 2025
-    uv run python -m nfl.ingest.schedules    --season 2025
+    uv run python -m nfl.ingest.player_stats
+    uv run python -m nfl.ingest.schedules
     uv run python -m nfl.ingest.ff_rankings
     uv run python scripts/make_samples.py
 
@@ -22,6 +22,8 @@ SAMPLES = Path("data/samples")
 
 TEAMS = ("KC", "PHI")
 MAX_WEEK = 4
+# Every season in the window is kept. The slice is narrowed on teams and weeks, not
+# seasons, so CI still exercises the multi-season aggregation S005A depends on.
 # Redraft overall — the board a standard season-long league drafts from. The feed also
 # carries dynasty/best-ball/superflex variants (see ecr_type), which we do not want.
 REDRAFT_OVERALL = "ro"
