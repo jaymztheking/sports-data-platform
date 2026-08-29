@@ -8,9 +8,14 @@
 > the thing being scored.
 
 ## User Story
-As the person deciding whether to trust these projections, I want every candidate
-projection scored against history and against the alternatives, so that "our model is
-better" is a measurement rather than a claim.
+As the person deciding whether to trust this, I want to measure whether our structural
+features actually identify **where the market (ADP) misprices players relative to what
+ECR already knows** — so that "this finds value" is a measurement rather than a claim.
+
+## Reframed: the baseline is ADP, not ECR
+We are not trying to out-predict expert consensus. The question is narrower and more
+answerable: **does the ECR-over-ADP gap predict outcomes, and do our features tell us
+which gaps are real?**
 
 ## Scope
 Train/test split, baselines, metrics, leakage guard. No projection logic — S018.
@@ -25,8 +30,9 @@ Train/test split, baselines, metrics, leakage guard. No projection logic — S01
 - [ ] Baselines, in increasing difficulty — a projection must beat 1 and 2 to be worth
       shipping, and matching 3 is the real bar:
       1. **Last season's per-game points** (what `fct_player_season` does today)
-      2. **Positional average** by depth-chart rank
-      3. **ECR itself** — consensus is strong; matching it is a genuine result
+      2. **ADP itself** — the market. Beating it is the actual goal.
+      3. **The raw within-position ECR−ADP gap**, unaided by our features. If our
+         structural work cannot improve on the naked gap, it is not earning its place.
 - [ ] Metrics: **MAE** and **RMSE** on per-game points, plus **Spearman rank
       correlation**. Rank correlation is the one that matters — drafting is an ordering
       problem, and being wrong about everyone by a constant costs nothing.
@@ -37,11 +43,19 @@ Train/test split, baselines, metrics, leakage guard. No projection logic — S01
 - [ ] harness runs on the committed sample and on full history
 - [ ] baselines reproduce known values (the 2025 board is the fixture)
 
+## Data constraint that shapes this story
+ADP history is available (FFC, 2022/2024/2025) and outcomes are already in
+`fct_player_season`, so **ADP → outcome is fully backtestable today**. ECR history does
+**not** exist — it is a live snapshot never captured. So ECR's marginal contribution can
+only be validated *going forward*, from the first stored snapshot on.
+
+That asymmetry is fine, and it sets the order of work: backtest structural features
+against ADP mispricing on 2022–2025 now; validate the ECR overlay from 2026 onward.
+
 ## Honest expectation
-Beating ECR is hard — it aggregates dozens of analysts with information we do not have
-(camp reports, injury nuance, coach interviews). **Target: match ECR on rank correlation,
-clearly beat last-year's-points.** If the first structural model lands between baselines
-2 and 3, that is a success, not a failure.
+The measurable win is modest and real: identify which ADP-vs-consensus gaps hold up. Do
+not expect a large edge — 8,000-draft ADP is a strong aggregate. A feature set that
+reliably picks the right side of the gap slightly more than half the time is worth having.
 
 ## Definition of Done
 Any projection can be scored against three baselines on four metrics, sliced by position

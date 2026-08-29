@@ -3,8 +3,11 @@
 **Phase**: 2 — Our own projections
 **Functional unit**: feature marts → projected 2026 season → our rankings
 
-> The payoff story: the first numbers in this repo that are **ours**. Replaces
-> `value_over_ecr` (last year's results vs. consensus) with `value_over_our_rank`.
+> The payoff story: the first numbers in this repo that are **ours**.
+>
+> **Not** "our projection vs. ECR". The output is **ECR signal amplified over ESPN ADP**,
+> corroborated by structural features — where the crowd is drafting against what
+> consensus already knows, and which of those gaps our features support.
 
 ## User Story
 As a fantasy manager, I want a projected 2026 season for every player and a ranking
@@ -52,9 +55,13 @@ TDs is a sell; the consensus board frequently is not pricing that.
       contract enforced, portable types
 - [ ] **rookies get a projection**, from draft capital + depth-chart role. This closes
       the 15 blanks on the current board (Jeremiyah Love at pick 41 among them).
-- [ ] `projected_position_rank` + **`value_over_our_rank`** vs. ECR — same shape as the
-      S005A metric, but now our forecast against consensus rather than last year's
-      results against consensus
+- [ ] `projected_position_rank`, and the headline metric **`edge_vs_adp`** — computed on
+      **within-position ranks** (the raw gap is a positional artifact; see S016)
+- [ ] a **corroboration flag**: does our structural projection agree with ECR's direction
+      against ADP? Agreement is the high-confidence buy; disagreement is where consensus
+      likely knows something we cannot see
+- [ ] carry **both** uncertainty signals — `ecr_stddev` (expert disagreement) and ADP
+      `stdev` (crowd disagreement). They are different populations, not interchangeable
 - [ ] every projection carries an **interval or confidence tier**, not just a point
       estimate. A point estimate implies precision the model does not have.
 
