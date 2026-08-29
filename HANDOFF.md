@@ -45,7 +45,7 @@ materially more history post-draft.
 |------|---------|
 | active | `S005A` `fct_player_season` draft board — built and green, PR open |
 | completed | `S001` foundation · `S002` dbt scaffold · `S003` ingest · `S003A` history window · `S004` staging |
-| planned | `S006` CI + branch protection (post-draft) |
+| planned | **`S016`–`S018` our own projections** (features → backtest → model) · `S006` CI + branch protection (post-draft) |
 | deferred | `S005` `fct_player_week` → post-draft (in-season product) |
 | backlog | `S007`–`S010` broaden products · `S011`–`S015` prod on k3s + BI + schedule |
 
