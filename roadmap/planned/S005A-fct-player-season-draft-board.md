@@ -44,6 +44,12 @@ not ingested until S007), projections, and any modelling. This is descriptive.
       cost). Join on normalised name + position — there is no shared player id between
       `player_stats` (`player_id`, gsis) and `ff_rankings` (`id`/`mergename`, ffverse),
       so expect a fuzzy-match step and assert the unmatched rate stays low.
+      **S004 already built this key** (`normalize_player_name`, suffix-stripped —
+      100% of the top-100 2025 producers match). The remaining hazard is the
+      *many-to-one*: `player_join_key + position` is NOT unique on the board (two
+      distinct WRs named "Isaiah Williams"), so the join must dedupe deliberately —
+      prefer the rostered entry over the FA one — and a `unique` test on the mart's
+      grain must prove it did.
 - [ ] `_nfl__marts.yml` — `contract: {enforced: true}`, portable `data_type`s + tests
 - [ ] `dbt` **unit test** on the scoring math (fixed inputs → known points)
 

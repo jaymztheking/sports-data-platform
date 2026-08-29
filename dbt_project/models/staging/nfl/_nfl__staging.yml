@@ -1,0 +1,74 @@
+version: 2
+
+models:
+  - name: stg_nfl__player_stats
+    description: >
+      Fantasy-relevant per-player-per-week stats. Grain is
+      player_id x season x week x season_type. S005A aggregates this to season grain;
+      S005 (post-draft) consumes it directly.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [player_id, season, week, season_type]
+    columns:
+      - name: player_id
+        description: nflverse gsis id.
+        data_tests: [not_null]
+      - name: season
+        data_tests: [not_null]
+      - name: week
+        data_tests: [not_null]
+      - name: season_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['REG', 'POST']
+      - name: player_join_key
+        description: Normalised name used to reach the ffverse draft board.
+        data_tests: [not_null]
+      - name: player_position
+        description: Renamed from `position` — reserved word in Postgres.
+      - name: target_share
+        description: Share of team targets, 0-1.
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+                max_value: 1
+                row_condition: "target_share is not null"
+
+  - name: stg_nfl__schedules
+    description: One row per game, REG and POST. Scores null until played.
+    columns:
+      - name: game_id
+        data_tests: [not_null, unique]
+      - name: season
+        data_tests: [not_null]
+      - name: week
+        data_tests: [not_null]
+      - name: home_team
+        data_tests: [not_null]
+      - name: away_team
+        data_tests: [not_null]
+
+  - name: stg_nfl__ff_rankings
+    description: >
+      FantasyPros consensus draft board, filtered to redraft-overall (`ecr_type = 'ro'`).
+      The filter is load-bearing: the raw feed stacks dynasty/best-ball/superflex boards
+      in the same table and joins fan out without it.
+    columns:
+      - name: ff_player_id
+        description: ffverse player id — the real grain of this model.
+        data_tests: [not_null, unique]
+      - name: player_join_key
+        description: >
+          Normalised name for the reach back to player stats. Deliberately NOT unique
+          even with position: the 2026 board has two distinct WRs named "Isaiah
+          Williams". S005A resolves this at join time.
+        data_tests: [not_null]
+      - name: ecr
+        description: Expert consensus rank — the cost signal. This feed has no ADP.
+        data_tests: [not_null]
+      - name: player_position
+        data_tests: [not_null]
