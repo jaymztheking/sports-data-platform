@@ -32,14 +32,14 @@ not ingested until S007), projections, and any modelling. This is descriptive.
 ## Acceptance Criteria
 
 ### Implementation
-- [ ] `seeds/scoring_rules.csv` — PPR / half / standard weights (shared with S005)
-- [ ] `models/marts/nfl/fct_player_season.sql`, grain = player × season × scoring format:
+- [x] `seeds/scoring_rules.csv` — PPR / half / standard weights (shared with S005)
+- [x] `models/marts/nfl/fct_player_season.sql`, grain = player × season × scoring format:
       - games played, total + **per-game** fantasy points
       - volume: targets, carries, receiving air yards
       - shares: target share, air-yards share
       - consistency: stddev of weekly points, floor/ceiling (p25/p75 weekly)
       - `position_rank` (per position, by per-game points)
-- [ ] ECR join → `ecr`, `ecr_position_rank`, `ecr_sd`, and **`value_over_ecr`**
+- [x] ECR join → `ecr`, `ecr_position_rank`, `ecr_sd`, and **`value_over_ecr`**
       (ECR-implied rank minus production rank; positive = producing better than draft
       cost). Join on normalised name + position — there is no shared player id between
       `player_stats` (`player_id`, gsis) and `ff_rankings` (`id`/`mergename`, ffverse),
@@ -50,13 +50,13 @@ not ingested until S007), projections, and any modelling. This is descriptive.
       distinct WRs named "Isaiah Williams"), so the join must dedupe deliberately —
       prefer the rostered entry over the FA one — and a `unique` test on the mart's
       grain must prove it did.
-- [ ] `_nfl__marts.yml` — `contract: {enforced: true}`, portable `data_type`s + tests
-- [ ] `dbt` **unit test** on the scoring math (fixed inputs → known points)
+- [x] `_nfl__marts.yml` — `contract: {enforced: true}`, portable `data_type`s + tests
+- [x] `dbt` **unit test** on the scoring math (fixed inputs → known points)
 
 ### Validation — unit / structural
-- [ ] `dbt build --target dev` (`NFL_DUCKDB_PATH=:memory:`) builds the mart, contract holds
-- [ ] `not_null` / `unique` on the grain key; `dbt_expectations` range check on per-game points
-- [ ] spot-check: top-12 RB by per-game 2025 points is not obviously wrong
+- [x] `dbt build --target dev` (`NFL_DUCKDB_PATH=:memory:`) builds the mart, contract holds
+- [x] `not_null` / `unique` on the grain key; `dbt_expectations` range check on per-game points
+- [x] spot-check: top-12 RB by per-game 2025 points is not obviously wrong
 
 ## Definition of Done
 `fct_player_season` builds under an enforced contract, and James can query it to rank

@@ -68,6 +68,14 @@ renamed as (
         air_yards_share,
         wopr,
 
+        -- two-point conversions, worth 2 apiece to the scorer
+        cast(passing_2pt_conversions as integer)
+        + cast(rushing_2pt_conversions as integer)
+        + cast(receiving_2pt_conversions as integer) as two_point_conversions,
+
+        -- return scores; nflverse counts these toward fantasy points
+        cast(special_teams_tds as integer) as special_teams_tds,
+
         -- turnovers that cost fantasy points
         cast(sack_fumbles_lost as integer)
         + cast(rushing_fumbles_lost as integer)

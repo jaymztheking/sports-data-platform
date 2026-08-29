@@ -1,0 +1,18 @@
+version: 2
+
+seeds:
+  - name: scoring_rules
+    description: >
+      Fantasy scoring weights, long-form (one row per format per stat). Verified to
+      reproduce nflverse's PPR exactly — see tests/assert_ppr_scoring_matches_nflverse.sql.
+    columns:
+      - name: scoring_format
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['standard', 'half_ppr', 'ppr']
+      - name: stat
+        data_tests: [not_null]
+      - name: points_per_unit
+        data_tests: [not_null]

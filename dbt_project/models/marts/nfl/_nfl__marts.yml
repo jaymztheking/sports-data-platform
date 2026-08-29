@@ -1,0 +1,155 @@
+version: 2
+
+models:
+  - name: fct_player_season
+    description: >
+      The draft board. One row per player per season per scoring format: production
+      expressed as per-game rates, ranked within position, set against the current
+      consensus draft cost (ECR).
+
+      Scoring is verified exact — `int_player_week_points` reproduces nflverse's own
+      PPR column on all 23,510 player-weeks with zero disagreement (see
+      `tests/assert_ppr_scoring_matches_nflverse.sql`).
+
+      Scope is QB/RB/WR/TE only. The scoring seed prices offensive stats, so any other
+      position would score a flat 0.0 and rank as a meaningless tie.
+    config:
+      contract:
+        enforced: true
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [player_id, season, scoring_format]
+    columns:
+      - name: player_id
+        data_type: varchar
+        description: nflverse gsis id.
+        data_tests: [not_null]
+      - name: season
+        data_type: integer
+        data_tests: [not_null]
+      - name: scoring_format
+        data_type: varchar
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['standard', 'half_ppr', 'ppr']
+      - name: player_display_name
+        data_type: varchar
+        data_tests: [not_null]
+      - name: player_position
+        data_type: varchar
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['QB', 'RB', 'WR', 'TE']
+      - name: team
+        data_type: varchar
+      - name: games_played
+        data_type: integer
+        description: REG-season games with a stat line.
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+                max_value: 18
+      - name: fantasy_points_total
+        data_type: numeric(28,6)
+      - name: fantasy_points_per_game
+        data_type: numeric(28,6)
+        description: The headline draft metric.
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: -10
+                max_value: 60
+      - name: fantasy_points_stddev
+        data_type: numeric(28,6)
+        description: Week-to-week volatility. Null for a single-game season.
+      - name: fantasy_points_floor
+        data_type: numeric(28,6)
+        description: 25th percentile weekly score.
+      - name: fantasy_points_ceiling
+        data_type: numeric(28,6)
+        description: 75th percentile weekly score.
+      - name: targets
+        data_type: integer
+      - name: receptions
+        data_type: integer
+      - name: carries
+        data_type: integer
+      - name: receiving_air_yards
+        data_type: numeric(28,6)
+      - name: target_share_avg
+        data_type: numeric(28,6)
+      - name: air_yards_share_avg
+        data_type: numeric(28,6)
+      - name: production_position_rank
+        data_type: integer
+        description: >
+          Rank within position by per-game points, across everyone who played. Null below
+          the `min_games_for_rank` threshold — "not enough season to say", not "bad".
+      - name: board_production_rank
+        data_type: integer
+        description: >
+          The same rank recomputed across draft-board members only. This is the one that
+          is comparable to `ecr_position_rank`; the two populations differ otherwise.
+      - name: ecr
+        data_type: numeric(28,6)
+        description: Overall expert consensus rank. This feed carries no ADP.
+      - name: ecr_stddev
+        data_type: numeric(28,6)
+      - name: bye_week
+        data_type: integer
+      - name: ecr_position_rank
+        data_type: integer
+      - name: value_over_ecr
+        data_type: integer
+        description: >
+          `ecr_position_rank - board_production_rank`. Positive = produced better than
+          he is being drafted. **Filter on `is_draftable` first** — beyond the drafted
+          pool the board stops ranking carefully and the number is noise.
+      - name: is_on_draft_board
+        data_type: boolean
+        description: False for players with production but no 2026 board entry.
+      - name: is_draftable
+        data_type: boolean
+        description: ECR inside `draftable_ecr_cutoff` — the pool actually drafted.
+
+unit_tests:
+  - name: test_ppr_scoring_math
+    description: Fixed stat line -> known PPR total, so the seed cannot drift silently.
+    model: int_player_week_points
+    given:
+      - input: ref('stg_nfl__player_stats')
+        rows:
+          - {player_id: 'x', season: 2025, week: 1, season_type: 'REG',
+             player_display_name: 'Test Back', player_position: 'RB',
+             player_join_key: 'test back', team: 'KC',
+             passing_yards: 0, passing_tds: 0, interceptions: 0,
+             rushing_yards: 100, rushing_tds: 1,
+             receptions: 5, receiving_yards: 50, receiving_tds: 0,
+             targets: 6, carries: 20, receiving_air_yards: 30,
+             target_share: 0.2, air_yards_share: 0.1,
+             fumbles_lost: 1, special_teams_tds: 0, two_point_conversions: 0}
+      - input: ref('scoring_rules')
+        rows:
+          - {scoring_format: 'ppr', stat: 'passing_yards', points_per_unit: 0.04}
+          - {scoring_format: 'ppr', stat: 'passing_tds', points_per_unit: 4}
+          - {scoring_format: 'ppr', stat: 'interceptions', points_per_unit: -2}
+          - {scoring_format: 'ppr', stat: 'rushing_yards', points_per_unit: 0.1}
+          - {scoring_format: 'ppr', stat: 'rushing_tds', points_per_unit: 6}
+          - {scoring_format: 'ppr', stat: 'receptions', points_per_unit: 1}
+          - {scoring_format: 'ppr', stat: 'receiving_yards', points_per_unit: 0.1}
+          - {scoring_format: 'ppr', stat: 'receiving_tds', points_per_unit: 6}
+          - {scoring_format: 'ppr', stat: 'fumbles_lost', points_per_unit: -2}
+          - {scoring_format: 'ppr', stat: 'special_teams_tds', points_per_unit: 6}
+          - {scoring_format: 'ppr', stat: 'two_point_conversions', points_per_unit: 2}
+    expect:
+      rows:
+        # 100 rush yds (10) + 1 rush TD (6) + 5 rec (5) + 50 rec yds (5) - 1 fumble (2) = 24
+        - {player_id: 'x', season: 2025, week: 1, scoring_format: 'ppr', fantasy_points: 24.0}

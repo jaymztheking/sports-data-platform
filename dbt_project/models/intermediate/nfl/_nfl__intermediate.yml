@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: int_player_week_points
+    description: >
+      Weekly fantasy points under every scoring format. Scoring is applied at week grain
+      because the season mart needs the distribution of weekly scores (stddev, floor,
+      ceiling), which aggregating first would destroy.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [player_id, season, week, scoring_format]
+    columns:
+      - name: fantasy_points
+        data_tests: [not_null]
+      - name: scoring_format
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['standard', 'half_ppr', 'ppr']
+      - name: player_position
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['QB', 'RB', 'WR', 'TE']
+
+  - name: int_draft_board
+    description: >
+      The draft board reduced to one row per player. Dedupes the name+position collision
+      the raw feed carries (two distinct WRs named "Isaiah Williams"), preferring a
+      rostered player over a free agent and then better ECR. Ordering matters: "lowest
+      ecr" alone resolves that pair the wrong way.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [player_join_key, player_position]
+    columns:
+      - name: ff_player_id
+        data_tests: [not_null, unique]
+      - name: ecr
+        data_tests: [not_null]
