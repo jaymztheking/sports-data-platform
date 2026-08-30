@@ -90,17 +90,35 @@ for S017's backtest.
 - [x] all new modules match the existing `player_stats.py` shape: runnable as
       `python -m nfl.ingest.<name> [--season ...]`, `ingested_at`/`source` metadata columns
 
-### Implementation — PR 2 (not started)
-- [ ] `src/nfl/ingest/pbp.py`, `rosters_weekly.py`, `injuries.py` — S008 inputs; `pbp`
-      gets a real few-game `data/samples/` slice, not a token filter (source is
-      ~13 MB/season, 49k rows × 372 cols)
-- [ ] `src/nfl/ingest/adp_espn.py` — current season only, no historical pull attempted
-- [ ] `src/nfl/ingest/adp_ffc.py` — full available history
-- [ ] snapshot mechanism: `ff_rankings` and `adp_espn` ingest runs append a `snapshot_date`
-      (or write to a dated partition) instead of overwriting the prior run's output
-- [ ] `data/samples/` slices committed for every new source (small: 2 teams / few weeks,
-      except `pbp` which needs a couple of full games)
-- [ ] `scripts/make_samples.py` updated to regenerate every new sample slice
+### Implementation — PR 2 (`s007-ingest-widening-pr2`, 2026-08-30)
+- [x] `src/nfl/ingest/pbp.py`, `rosters_weekly.py`, `injuries.py` — S008 inputs
+- [x] `src/nfl/ingest/adp_espn.py` — current season only, no historical pull attempted;
+      rejects a constant `adp` column (the known 2025-sentinel shape) instead of
+      silently ingesting it
+- [x] `src/nfl/ingest/adp_ffc.py` — full available history + upcoming season, one
+      `requests` call per season (the API takes a single `year`, unlike nflreadpy)
+- [x] `_common.append_snapshot_parquet` — new shared helper: reads-concats-dedupes-writes
+      a Parquet history stamped with `snapshot_date`, so a rerun never erases a prior one
+- [x] `ff_rankings.py` wired to it **additively**: `ff_rankings.parquet` (S004/S005A's
+      existing source) stays an untouched full-refresh overwrite; a new, separate
+      `ff_rankings_snapshots.parquet` accumulates history alongside it. Deliberately not
+      one flat-file swap — changing the file S004's already-shipped `stg_nfl__ff_rankings`
+      reads would risk breaking the live draft board days before the 2026-09-05 draft.
+- [x] new direct dependency `requests>=2.31` in `pyproject.toml` (was only a transitive
+      dep via `nflreadpy`; the two new ADP modules import it directly)
+
+### Scope cut from the original AC list — samples deferred to S016/S008
+`data/samples/` slices + `scripts/make_samples.py` updates are **not** in this PR (or
+PR 1). A sample exists to let CI build a dbt source against a tiny fixture; per this
+story's own Definition of Done, **no dbt source is wired for any S007 output yet** —
+that happens in S016/S008 when each source actually gets consumed. Committing samples
+now would be dead weight with nothing in CI to exercise them, and `make_samples.py`'s
+per-source filtering logic (team/week slices for stats-shaped data, name-matched
++ extras for board-shaped data, "a couple of full games, not a token filter" for `pbp`)
+is easiest to get right at the same time the corresponding staging model is written,
+when the join keys and grain are concretely in front of whoever's writing it. Whichever
+of S016/S008 wires a given source's `raw_nfl` entry does its sample slice as part of
+that same PR.
 
 ### Validation — unit / structural
 - [x] unit tests per PR-1 module: schema/dtypes as expected, metadata columns present,
@@ -110,10 +128,14 @@ for S017's backtest.
       once — row counts: `team_stats` 570, `snap_counts` 26,612, `draft_picks` 257,
       `depth_charts` 485,277, `pfr_advstats` rush 2,355 / pass 684, `ff_opportunity` 6,054,
       `schedules` (2025+2026) 557 — all on 2025 (or 2026 where applicable) alone
-- [ ] explicit test: ESPN ADP ingest rejects or flags a column of identical values (the
-      known 2025-sentinel failure mode) rather than silently ingesting it — PR 2
-- [ ] explicit test: two sequential snapshot runs on different dates both survive in the
-      output — an append does not clobber the prior run's rows — PR 2
+- [x] explicit test: ESPN ADP ingest rejects a column of identical values (the known
+      2025-sentinel failure mode) rather than silently ingesting it
+- [x] explicit test: two sequential snapshot runs on different dates both survive in the
+      output — an append does not clobber the prior run's rows; a same-day rerun with
+      identical rows does not double the history
+- [x] PR-2 unit tests: 17 new tests (adp_espn, adp_ffc, pbp, rosters_weekly, injuries,
+      snapshot helper + ff_rankings integration) — 93 total, all green, ruff +
+      mypy --strict clean
 - [ ] PR-2 modules get their own live end-to-end pull + row counts before merge
 
 ## Definition of Done
