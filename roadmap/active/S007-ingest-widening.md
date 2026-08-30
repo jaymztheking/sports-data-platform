@@ -7,6 +7,13 @@ cover everything S016's feature marts (and S008's usage intermediates) need
 > Promoted out of `roadmap/backlog/S007-S015-later-phases.md` 2026-08-29. **Hard
 > dependency: S007 → S016, S007 → S008.** Neither can build without this landing first.
 
+> **2026-08-30 — split into two PRs.** The 8 `nflreadpy` loaders + the 2026 schedule
+> extension are one PR (`s007-ingest-widening`) — they all follow the exact
+> `player_stats.py`/`schedules.py` pattern already in the repo. ESPN/FFC ADP ingest,
+> the snapshot mechanism, and the S008-only samples (`pbp`/`rosters_weekly`/`injuries`)
+> are genuinely new engineering (new HTTP APIs, new append-don't-overwrite behavior)
+> and follow as a second PR. Checkboxes below are marked per PR.
+
 ## User Story
 As the projection pipeline, I need environment/role/ADP inputs sitting on disk as Parquet
 so that S016's feature marts have real data to build on, and so ECR/ADP have a history to
@@ -68,36 +75,46 @@ for S017's backtest.
 
 ## Acceptance Criteria
 
-### Implementation
-- [ ] `src/nfl/ingest/pfr_advstats.py` — rush + pass, both stat types, one module
-- [ ] `src/nfl/ingest/team_stats.py`
-- [ ] `src/nfl/ingest/draft_picks.py`
-- [ ] `src/nfl/ingest/depth_charts.py` — 2026 season
-- [ ] `src/nfl/ingest/schedules.py` extended to also pull the 2026 season (currently
-      scoped to `history_start_season`..2025 per S003A's window)
-- [ ] `src/nfl/ingest/ff_opportunity.py`
-- [ ] `src/nfl/ingest/snap_counts.py`, `pbp.py`, `rosters_weekly.py`, `injuries.py` — S008
-      inputs; `pbp` gets a real few-game `data/samples/` slice, not a token filter (source
-      is ~13 MB/season, 49k rows × 372 cols)
+### Implementation — PR 1 (`s007-ingest-widening`, 2026-08-30)
+- [x] `src/nfl/ingest/pfr_advstats.py` — rush + pass, both stat types, one module
+- [x] `src/nfl/ingest/team_stats.py`
+- [x] `src/nfl/ingest/draft_picks.py` — defaults to every draft class (`seasons=True`),
+      not the recent history window, since a board veteran's draft year can predate it
+- [x] `src/nfl/ingest/depth_charts.py` — defaults to `current_season` (2026) only
+- [x] `src/nfl/ingest/schedules.py` extended to also pull `current_season` by default
+      (was `history_start_season`..`default_season` only, per S003A's window)
+- [x] `src/nfl/ingest/ff_opportunity.py`
+- [x] `src/nfl/ingest/snap_counts.py`
+- [x] new `Settings.current_season` (default 2026) — distinct from `default_season`
+      (most recent *complete* season); used by `depth_charts`/`schedules`
+- [x] all new modules match the existing `player_stats.py` shape: runnable as
+      `python -m nfl.ingest.<name> [--season ...]`, `ingested_at`/`source` metadata columns
+
+### Implementation — PR 2 (not started)
+- [ ] `src/nfl/ingest/pbp.py`, `rosters_weekly.py`, `injuries.py` — S008 inputs; `pbp`
+      gets a real few-game `data/samples/` slice, not a token filter (source is
+      ~13 MB/season, 49k rows × 372 cols)
 - [ ] `src/nfl/ingest/adp_espn.py` — current season only, no historical pull attempted
 - [ ] `src/nfl/ingest/adp_ffc.py` — full available history
 - [ ] snapshot mechanism: `ff_rankings` and `adp_espn` ingest runs append a `snapshot_date`
       (or write to a dated partition) instead of overwriting the prior run's output
-- [ ] all new modules match the existing `player_stats.py` shape: runnable as
-      `python -m nfl.ingest.<name> [--season ...]`, `ingested_at`/`source` metadata columns
 - [ ] `data/samples/` slices committed for every new source (small: 2 teams / few weeks,
       except `pbp` which needs a couple of full games)
 - [ ] `scripts/make_samples.py` updated to regenerate every new sample slice
 
 ### Validation — unit / structural
-- [ ] unit tests per module: schema/dtypes as expected, metadata columns present, writes
-      Parquet (fixture/mock, no network in CI — same pattern as existing ingest tests)
+- [x] unit tests per PR-1 module: schema/dtypes as expected, metadata columns present,
+      writes Parquet (fixture/mock, no network in CI — same pattern as existing ingest
+      tests); 76 tests green, ruff + mypy --strict clean
+- [x] full pull runs clean end-to-end for every PR-1 module against live sources at least
+      once — row counts: `team_stats` 570, `snap_counts` 26,612, `draft_picks` 257,
+      `depth_charts` 485,277, `pfr_advstats` rush 2,355 / pass 684, `ff_opportunity` 6,054,
+      `schedules` (2025+2026) 557 — all on 2025 (or 2026 where applicable) alone
 - [ ] explicit test: ESPN ADP ingest rejects or flags a column of identical values (the
-      known 2025-sentinel failure mode) rather than silently ingesting it
+      known 2025-sentinel failure mode) rather than silently ingesting it — PR 2
 - [ ] explicit test: two sequential snapshot runs on different dates both survive in the
-      output — an append does not clobber the prior run's rows
-- [ ] full pull runs clean end-to-end for every new module against live sources at least
-      once (not just the mocked unit tests) — record row counts in the PR description
+      output — an append does not clobber the prior run's rows — PR 2
+- [ ] PR-2 modules get their own live end-to-end pull + row counts before merge
 
 ## Definition of Done
 Every loader S016 and S008 depend on is pulling clean Parquet locally, with samples
