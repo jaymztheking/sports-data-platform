@@ -76,3 +76,37 @@ def test_main_writes_parquet_to_the_configured_data_dir(
     assert rc == 0
     assert target.exists()
     assert pl.read_parquet(target).height == 2
+
+
+def test_main_also_appends_a_dated_snapshot(
+    fake_loader: dict[str, Any], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """`ff_rankings.parquet` (S004/S005A's existing source) is unaffected — it stays a
+    full-refresh overwrite. The snapshot is a separate, additive file (S007/S017), so
+    changing it can never break the already-shipped draft board."""
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+
+    ff_rankings.main([])
+
+    snapshot = tmp_path / ff_rankings.FILENAME_SNAPSHOTS
+    assert snapshot.exists()
+    out = pl.read_parquet(snapshot)
+    assert out.height == 2
+    today = dt.datetime.now(dt.UTC).date()
+    assert out["snapshot_date"].to_list() == [today, today]
+
+
+def test_main_snapshot_survives_a_second_run_on_a_later_date(
+    fake_loader: dict[str, Any], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(settings, "data_dir", tmp_path)
+    snapshot = tmp_path / ff_rankings.FILENAME_SNAPSHOTS
+    ff_rankings.append_snapshot_parquet(
+        pl.DataFrame({"player": ["Old Guy"]}), snapshot, snapshot_date=dt.date(2020, 1, 1)
+    )
+
+    ff_rankings.main([])
+
+    out = pl.read_parquet(snapshot)
+    assert dt.date(2020, 1, 1) in out["snapshot_date"].to_list()
+    assert out.height == 3
