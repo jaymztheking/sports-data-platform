@@ -39,13 +39,26 @@ materially more history post-draft.
 `stg_nfl__{player_stats,schedules,ff_rankings}` + `normalize_player_name` macro +
 `.sqlfluff`. Green on both the sample and the full season (22/22), freshness passes.
 
+**2026-08-29 — S004/S005A merged, S007 promoted, roadmap sync PR (#9).** S004 (PR #4)
+and S005A (PR #7) were already merged but `HANDOFF.md`/lane folders hadn't caught up —
+`S004-staging-sources.md` moved `active/` → `completed/`. `S007` promoted from `backlog/`
+to `planned/` with full acceptance criteria (it's the hard dependency S016 needs).
+
+**2026-08-30 — S007 PR 1 in flight** on `s007-ingest-widening`: the 8 `nflreadpy`
+loaders S016 needs (`pfr_advstats`, `team_stats`, `draft_picks`, `depth_charts`,
+`ff_opportunity`, `snap_counts`) plus the 2026 `schedules` extension, all following the
+existing `player_stats.py` ingest pattern. New `Settings.current_season` (2026) config
+knob. 76 unit tests green (no network), ruff + mypy --strict clean, and every loader
+smoke-tested against live nflreadpy data. ESPN/FFC ADP ingest + snapshotting + S008
+samples are a separate PR 2 — see `roadmap/planned/S007-ingest-widening.md`.
+
 ## Board state
 
 | Lane | Stories |
 |------|---------|
-| active | *(none — `S004` file still sits in `active/` but is merged; needs moving to `completed/`)* |
+| active | `S007` ingest widening (PR 1 built, not yet merged) |
 | completed | `S001` foundation · `S002` dbt scaffold · `S003` ingest · `S003A` history window · `S004` staging · `S005A` `fct_player_season` draft board |
-| planned | **`S007` ingest widening** (blocks S016) → **`S016`–`S018` our own projections** (features → backtest → model) · `S006` CI + branch protection (post-draft) |
+| planned | `S007` PR 2 (ADP ingest + snapshotting) → **`S016`–`S018` our own projections** (features → backtest → model) · `S006` CI + branch protection (post-draft) |
 | deferred | `S005` `fct_player_week` → post-draft (in-season product) |
 | backlog | `S008`–`S010` broaden products · `S011`–`S015` prod on k3s + BI + schedule |
 
@@ -53,27 +66,33 @@ Detailed acceptance criteria live in each `roadmap/<lane>/SNNN-*.md`.
 
 ## Next action
 
-**Critical path to 2026-09-05 (drafts).** Claude is writing these in full per the rule-3
-suspension; each still lands as its own reviewed PR with tests first.
+**Critical path to S018 (our own projections), not the 2026-09-05 draft anymore** — S007
+→ S016 → S017 → S018 is real modelling work that won't land before drafts; the draft
+board itself (`S005A`) already shipped and is usable as-is. Claude is writing these in
+full per the rule-3 suspension; each still lands as its own reviewed PR with tests first.
 
-1. ~~`S003`~~ merged (PR #3).
-2. **`S004`** — built and green; PR open, needs review/merge.
-3. **`S005A`** — `fct_player_season` draft board + `scoring_rules.csv` seed. **Next build.**
+1. ~~`S003`~~, ~~`S004`~~, ~~`S005A`~~, ~~roadmap sync (#9)~~ — merged.
+2. **`S007` PR 1** (`s007-ingest-widening`) — built, tested, smoke-tested; **needs a PR
+   opened and merged.**
+3. **`S007` PR 2** — ESPN/FFC ADP ingest + snapshot mechanism + S008 samples. Not started.
+4. **`S016`** — feature marts. Blocked on S007 PR 1 (minimum) landing.
 
-**Carry into S005A — the one place the board can still be silently wrong:**
-`player_join_key + position` is not unique on the draft board (two distinct WRs named
-*Isaiah Williams*). The join must dedupe deliberately, preferring the rostered entry over
-the free agent, with a `unique` test on the mart grain proving it. The name key itself is
-solved — `normalize_player_name` strips generational suffixes and now matches 100% of the
-top-100 2025 producers (before stripping, Mahomes/Cook/Etienne/Pitts fell off the board).
+**Run an ingest module:** `uv run python -m nfl.ingest.<module> [--season YYYY ...]` from
+the repo root; writes to `NFL_DATA_DIR` (default `data/raw`).
 
-**Run the build:** `NFL_DATA_DIR=data/raw uv run dbt build --project-dir dbt_project
+**Run the dbt build:** `NFL_DATA_DIR=data/raw uv run dbt build --project-dir dbt_project
 --profiles-dir dbt_project` from the repo root (paths in `external_location` are relative
 to cwd). CI swaps in `NFL_DATA_DIR=data/samples NFL_DUCKDB_PATH=:memory:`.
 
 Note: CI still does not run dbt (and does not lint `scripts/` or run sqlfluff) — that
-wiring is **S006**, which stays *after* the draft. Until then the local `dbt build` on both
-`data/samples` and `data/raw` is the gate.
+wiring is **S006**, deferred until after the projection stories. Until then the local
+`dbt build` on both `data/samples` and `data/raw` is the gate.
+
+Known local-only issue: `pytest` on this Windows checkout fails 3 pre-existing
+`*_adds_metadata` tests with `ZoneInfoNotFoundError: No time zone found with key UTC` — a
+polars/zoneinfo resource-lookup quirk in this venv, reproduces on `main` too, unrelated to
+any story's changes. Run `pytest -k "not adds_metadata and not stamps_one_utc"` locally to
+skip it; CI (Linux) is not expected to hit it.
 
 ## Notes / decisions
 

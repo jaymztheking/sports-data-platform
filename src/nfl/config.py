@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     history_start_season: int = Field(default=2022)
     # NFL_DEFAULT_SEASON — most recent complete season; the top of the window.
     default_season: int = Field(default=2025)
+    # NFL_CURRENT_SEASON — the upcoming season. Distinct from `default_season`: role/board
+    # data (depth charts, live ADP) describes the season ahead, which has no played games
+    # to summarize yet, so it can't live in the historical window.
+    current_season: int = Field(default=2026)
 
     @property
     def default_seasons(self) -> list[int]:

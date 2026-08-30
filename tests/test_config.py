@@ -23,3 +23,12 @@ def test_history_window_widens_from_config_alone() -> None:
 
     assert len(s.default_seasons) == 10
     assert s.default_seasons[0] == 2016
+
+
+def test_current_season_defaults_to_2026() -> None:
+    """The upcoming season — used for role/board data that has no history to average,
+    like depth charts and live ADP. Distinct from `default_season`, which is the most
+    recent *complete* season anchoring the historical window."""
+    s = Settings()
+
+    assert s.current_season == 2026

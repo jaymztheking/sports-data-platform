@@ -73,17 +73,20 @@ def test_main_writes_parquet_to_the_configured_data_dir(
     assert pl.read_parquet(target).height == 2
 
 
-def test_main_defaults_to_the_whole_history_window(
+def test_main_defaults_to_the_whole_history_window_plus_the_upcoming_season(
     fake_loader: dict[str, Any], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Bare `python -m nfl.ingest.*` pulls every season, not just the latest."""
+    """Bare `python -m nfl.ingest.schedules` pulls the historical window *and* the
+    upcoming season — S016 needs 2026 Vegas lines, which player_stats/team_stats/etc.
+    don't have a history-window equivalent of, since no 2026 games have been played."""
     monkeypatch.setattr(settings, "data_dir", tmp_path)
     monkeypatch.setattr(settings, "history_start_season", 2022)
     monkeypatch.setattr(settings, "default_season", 2025)
+    monkeypatch.setattr(settings, "current_season", 2026)
 
     schedules.main([])
 
-    assert fake_loader["seasons"] == [2022, 2023, 2024, 2025]
+    assert fake_loader["seasons"] == [2022, 2023, 2024, 2025, 2026]
 
 
 def test_main_accepts_multiple_seasons(
