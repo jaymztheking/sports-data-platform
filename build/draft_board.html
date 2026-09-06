@@ -1,0 +1,276 @@
+<title>2026 Draft Board - Value vs. Consensus</title>
+<style>
+:root{
+  --ink:#10141A;--ink-2:#171D25;--line:#252D38;--paper:#EEF0EE;
+  --bg:var(--paper);--surface:#FFFFFF;--surface-2:#E7EAE7;--rule:#CBD1CC;
+  --text:#161B21;--text-dim:#5C6670;--text-faint:#8A939B;
+  --qb:#C2542F;--rb:#1F8467;--wr:#35689F;--te:#9C7220;
+  --pos:#2C7A50;--neg:#B34334;--flat:#8A939B;--focus:#35689F;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+}
+@media (prefers-color-scheme:dark){:root{--bg:var(--ink);--surface:var(--ink-2);
+  --surface-2:#1E2530;--rule:var(--line);--text:#E4E8EC;--text-dim:#98A3AE;
+  --text-faint:#6B7681;--qb:#E2795A;--rb:#3FBF98;--wr:#6BA6DF;--te:#D9A945;
+  --pos:#4FBE7C;--neg:#E0685A;--flat:#6B7681;--focus:#6BA6DF}}
+:root[data-theme="dark"]{--bg:var(--ink);--surface:var(--ink-2);--surface-2:#1E2530;
+  --rule:var(--line);--text:#E4E8EC;--text-dim:#98A3AE;--text-faint:#6B7681;
+  --qb:#E2795A;--rb:#3FBF98;--wr:#6BA6DF;--te:#D9A945;--pos:#4FBE7C;--neg:#E0685A;
+  --flat:#6B7681;--focus:#6BA6DF}
+:root[data-theme="light"]{--bg:var(--paper);--surface:#FFFFFF;--surface-2:#E7EAE7;
+  --rule:#CBD1CC;--text:#161B21;--text-dim:#5C6670;--text-faint:#8A939B;--qb:#C2542F;
+  --rb:#1F8467;--wr:#35689F;--te:#9C7220;--pos:#2C7A50;--neg:#B34334;--flat:#8A939B;
+  --focus:#35689F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--mono);
+  font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 72px}
+header.masthead{padding:36px 0 18px;border-bottom:2px solid var(--text)}
+.kicker{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--text-dim)}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(30px,5vw,46px);line-height:1.04;
+  margin:10px 0 8px;letter-spacing:-.015em;text-wrap:balance}
+.dek{color:var(--text-dim);max-width:66ch;font-size:12.5px;line-height:1.6}
+.dek b{color:var(--text);font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);margin:20px 0 0}
+.tile{background:var(--surface);padding:11px 13px;display:flex;flex-direction:column;gap:3px}
+.tile .n{font-family:var(--serif);font-size:25px;line-height:1;font-weight:600}
+.tile .l{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--text-dim)}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 0;
+  margin-top:24px;border-bottom:1px solid var(--rule)}
+.seg{display:flex;border:1px solid var(--rule);background:var(--surface)}
+.seg button{font:inherit;font-size:11px;letter-spacing:.06em;background:none;border:0;
+  color:var(--text-dim);padding:6px 11px;cursor:pointer;border-right:1px solid var(--rule)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--text);color:var(--bg);font-weight:600}
+button:focus-visible,input:focus-visible,tr:focus-visible{outline:2px solid var(--focus);
+  outline-offset:-2px}
+input[type="search"]{font:inherit;font-size:12px;background:var(--surface);color:var(--text);
+  border:1px solid var(--rule);padding:6px 10px;min-width:170px}
+input[type="search"]::placeholder{color:var(--text-faint)}
+.act{font:inherit;font-size:11px;letter-spacing:.06em;background:var(--surface);
+  border:1px solid var(--rule);color:var(--text-dim);padding:6px 11px;cursor:pointer}
+.act[aria-pressed="true"]{background:var(--text);color:var(--bg);font-weight:600}
+.act.danger:hover{border-color:var(--neg);color:var(--neg)}
+.count{font-size:11px;color:var(--text-dim);margin-left:auto}
+.count b{color:var(--text)}
+/* The table owns its scroll region in both axes and the header pins to the top of it.
+   Setting only overflow-x:auto forces overflow-y to auto per spec, which made a sticky
+   header resolve against this wrapper instead of the viewport and park mid-table. */
+.tablewrap{border:1px solid var(--rule);border-top:0;overflow:auto;max-height:70vh}
+table{border-collapse:separate;border-spacing:0;width:100%;min-width:960px}
+thead th{position:sticky;top:0;z-index:10;background:var(--surface-2);
+  border-bottom:1px solid var(--rule);padding:0;text-align:right;white-space:nowrap}
+thead th.l{text-align:left}
+th button{font:inherit;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-dim);background:none;border:0;padding:9px 8px;cursor:pointer;width:100%;
+  text-align:inherit;white-space:nowrap}
+th button[data-active="1"]{color:var(--text);font-weight:700}
+tbody td{border-bottom:1px solid var(--rule)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--surface-2)}
+td{padding:7px 8px;text-align:right;white-space:nowrap}
+td.l{text-align:left}
+.rank{color:var(--text-faint);font-size:11px;width:34px}
+.pos{display:inline-block;min-width:26px;text-align:center;font-size:9.5px;font-weight:700;
+  letter-spacing:.06em;padding:2px 4px;color:#fff}
+.pos.QB{background:var(--qb)}.pos.RB{background:var(--rb)}
+.pos.WR{background:var(--wr)}.pos.TE{background:var(--te)}
+.nm{font-weight:600;font-size:12.5px}
+.tm{color:var(--text-faint);font-size:10.5px;margin-left:5px}
+.dim{color:var(--text-dim)}
+.na{color:var(--text-faint);font-style:italic;font-size:11px}
+.val{display:inline-block;min-width:38px;text-align:center;padding:2px 6px;font-size:11.5px;
+  font-weight:700;border:1px solid currentColor}
+.val.p{color:var(--pos)}.val.n{color:var(--neg)}.val.z{color:var(--flat)}
+.rangecell{width:128px}
+.range{position:relative;height:16px;width:116px;margin-left:auto}
+.range .track{position:absolute;top:7px;left:0;right:0;height:2px;background:var(--rule)}
+.range .span{position:absolute;top:6px;height:4px;background:currentColor;opacity:.30}
+.range .dot{position:absolute;top:3px;width:2px;height:10px;background:currentColor}
+.range.QB{color:var(--qb)}.range.RB{color:var(--rb)}
+.range.WR{color:var(--wr)}.range.TE{color:var(--te)}
+/* Drafted: struck through and dimmed, but deliberately still legible -- mid-draft you
+   still need to check who went and undo a misclick. */
+.pick{width:30px;padding-left:10px}
+.box{width:13px;height:13px;border:1.5px solid var(--text-faint);background:none;
+  padding:0;cursor:pointer;display:block;position:relative}
+tr.drafted .box{background:var(--text-dim);border-color:var(--text-dim)}
+tr.drafted .box::after{content:"";position:absolute;inset:2px;
+  border-left:1.5px solid var(--bg);border-bottom:1.5px solid var(--bg);
+  transform:rotate(-45deg) translate(1px,-1px)}
+tr.drafted td{opacity:.45}
+tr.drafted .nm{text-decoration:line-through}
+tr.drafted:hover td{opacity:.72}
+.legend{margin-top:18px;font-size:11px;color:var(--text-dim);line-height:1.7;max-width:78ch}
+.legend b{color:var(--text)}
+.legend ul{margin:8px 0 0;padding-left:16px}
+.legend li{margin-bottom:5px}
+footer{margin-top:24px;padding-top:14px;border-top:1px solid var(--rule);
+  font-size:10.5px;color:var(--text-faint);line-height:1.7}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:640px){.count{margin-left:0;width:100%}.tablewrap{max-height:62vh}}
+</style>
+<div class="wrap">
+<header class="masthead">
+  <div class="kicker">PPR &middot; production 2022&ndash;2025 &middot; consensus board scraped 2026-09-04</div>
+  <h1>The Draft Board</h1>
+  <p class="dek">The 180 players inside the drafted pool, ordered by expert consensus rank.
+  <b>Click any row to cross a player off</b> as he is taken &mdash; it sticks through a page
+  refresh. <b>Value</b> is where a player&rsquo;s 2025 production ranked at his position minus
+  where he&rsquo;s being drafted; positive means he produced better than his cost.</p>
+  <div class="tiles">
+    <div class="tile"><span class="n" id="tile-left">180</span><span class="l">Available</span></div>
+    <div class="tile"><span class="n" id="tile-gone">0</span><span class="l">Drafted</span></div>
+    <div class="tile"><span class="n">76</span><span class="l">Positive value</span></div>
+    <div class="tile"><span class="n">15</span><span class="l">No 2025 data</span></div>
+    <div class="tile"><span class="n">4</span><span class="l">Seasons behind it</span></div>
+  </div>
+</header>
+<div class="controls">
+  <div class="seg" role="group" aria-label="Filter by position">
+    <button data-p="ALL" aria-pressed="true">All</button>
+    <button data-p="QB" aria-pressed="false">QB</button>
+    <button data-p="RB" aria-pressed="false">RB</button>
+    <button data-p="WR" aria-pressed="false">WR</button>
+    <button data-p="TE" aria-pressed="false">TE</button>
+  </div>
+  <button class="act" id="hide" aria-pressed="false">Hide drafted</button>
+  <button class="act danger" id="reset">Reset board</button>
+  <input id="q" type="search" placeholder="Search player or team&hellip;" aria-label="Search players">
+  <span class="count" id="count"></span>
+</div>
+<div class="tablewrap">
+  <table><thead id="th"></thead><tbody id="tb"></tbody></table>
+</div>
+<div class="legend">
+  <b>Reading it.</b>
+  <ul>
+    <li><b>Crossing off</b> &mdash; click a row (or focus it and hit Enter) to mark a player
+      drafted. Struck-through rows stay legible on purpose: mid-draft you still need to check
+      who went, and undo a misclick. <b>Hide drafted</b> collapses them; <b>Reset board</b>
+      clears everything for a new draft.</li>
+    <li><b>Value</b> &mdash; production rank minus draft rank, both across board members only
+      so the scales are comparable. Bounded to the drafted pool; past that consensus stops
+      ranking carefully and the number turns to noise.</li>
+    <li><b>Floor-Ceiling</b> &mdash; 25th to 75th percentile of weekly scores, tick at the
+      per-game average. Scaled within position, so bars compare RB to RB.</li>
+    <li><b>Swing</b> &mdash; standard deviation of weekly scores. A 14 ppg player alternating
+      4 and 24 is a different pick from one scoring 14 every week.</li>
+    <li><b>no 2025 data</b> &mdash; rookies. Missing rather than zero, because zero would sort
+      them last and they are unmeasured, not bad.</li>
+  </ul>
+</div>
+<footer>
+  Backward-looking by construction &mdash; second-year players read as overpriced because
+  rookie usage understates a 2026 role. Consensus rank is ECR, not ADP.
+  Production covers 2022&ndash;2025; the consensus board is a live snapshot, scraped 2026-09-04.
+  Cross-offs are stored in this browser only.
+</footer>
+</div>
+<script>const DATA=[{"overall":1,"player":"Ja'Marr Chase","pos":"WR","team":"CIN","ecr":1.5,"ecr_sd":0.9,"bye":6,"scraped":"2026-09-04","gp":16,"ppg":19.6,"floor":9.9,"ceil":25.0,"sd":10.3,"value":-2,"career_ppg":20.0},{"overall":2,"player":"Jahmyr Gibbs","pos":"RB","team":"DET","ecr":2.4,"ecr_sd":1.2,"bye":6,"scraped":"2026-09-04","gp":17,"ppg":21.6,"floor":11.6,"ceil":26.9,"sd":13.5,"value":-2,"career_ppg":19.7},{"overall":3,"player":"Puka Nacua","pos":"WR","team":"LAR","ecr":3.4,"ecr_sd":1.6,"bye":11,"scraped":"2026-09-04","gp":16,"ppg":23.4,"floor":16.4,"ceil":27.7,"sd":10.2,"value":1,"career_ppg":19.9},{"overall":4,"player":"Bijan Robinson","pos":"RB","team":"ATL","ecr":4.2,"ecr_sd":1.3,"bye":11,"scraped":"2026-09-04","gp":17,"ppg":21.8,"floor":14.7,"ceil":29.8,"sd":10.3,"value":0,"career_ppg":18.8},{"overall":5,"player":"Jaxon Smith-Njigba","pos":"WR","team":"SEA","ecr":4.6,"ecr_sd":1.4,"bye":11,"scraped":"2026-09-04","gp":17,"ppg":21.2,"floor":18.3,"ceil":26.3,"sd":7.5,"value":1,"career_ppg":15.0},{"overall":6,"player":"Amon-Ra St. Brown","pos":"WR","team":"DET","ecr":5.4,"ecr_sd":1.3,"bye":6,"scraped":"2026-09-04","gp":17,"ppg":19.1,"floor":13.7,"ceil":24.9,"sd":10.9,"value":0,"career_ppg":18.8},{"overall":7,"player":"CeeDee Lamb","pos":"WR","team":"DAL","ecr":9.0,"ecr_sd":1.7,"bye":14,"scraped":"2026-09-04","gp":13,"ppg":15.5,"floor":11.5,"ceil":18.1,"sd":6.0,"value":-5,"career_ppg":18.6},{"overall":8,"player":"Justin Jefferson","pos":"WR","team":"MIN","ecr":9.2,"ecr_sd":2.9,"bye":6,"scraped":"2026-09-04","gp":17,"ppg":11.9,"floor":7.7,"ceil":14.8,"sd":5.8,"value":-24,"career_ppg":18.1},{"overall":9,"player":"Christian McCaffrey","pos":"RB","team":"SF","ecr":9.6,"ecr_sd":4.5,"bye":8,"scraped":"2026-09-04","gp":17,"ppg":24.5,"floor":17.6,"ceil":28.1,"sd":8.2,"value":2,"career_ppg":20.5},{"overall":10,"player":"Jonathan Taylor","pos":"RB","team":"IND","ecr":11.8,"ecr_sd":5.0,"bye":13,"scraped":"2026-09-04","gp":17,"ppg":21.3,"floor":12.8,"ceil":31.6,"sd":12.4,"value":0,"career_ppg":16.9},{"overall":11,"player":"Drake London","pos":"WR","team":"ATL","ecr":13.2,"ecr_sd":3.5,"bye":11,"scraped":"2026-09-04","gp":12,"ppg":16.8,"floor":7.6,"ceil":24.6,"sd":11.5,"value":0,"career_ppg":13.7},{"overall":12,"player":"A.J. Brown","pos":"WR","team":"NE","ecr":13.7,"ecr_sd":5.5,"bye":11,"scraped":"2026-09-04","gp":15,"ppg":14.7,"floor":8.5,"ceil":20.7,"sd":9.8,"value":-4,"career_ppg":16.5},{"overall":13,"player":"James Cook III","pos":"RB","team":"BUF","ecr":15.0,"ecr_sd":5.7,"bye":7,"scraped":"2026-09-04","gp":17,"ppg":17.8,"floor":10.7,"ceil":22.5,"sd":9.2,"value":-1,"career_ppg":13.7},{"overall":14,"player":"Nico Collins","pos":"WR","team":"HOU","ecr":16.0,"ecr_sd":3.7,"bye":8,"scraped":"2026-09-04","gp":15,"ppg":15.1,"floor":9.3,"ceil":21.9,"sd":6.5,"value":-2,"career_ppg":14.9},{"overall":15,"player":"Chase Brown","pos":"RB","team":"CIN","ecr":17.1,"ecr_sd":6.0,"bye":6,"scraped":"2026-09-04","gp":17,"ppg":16.6,"floor":11.8,"ceil":19.0,"sd":7.3,"value":-1,"career_ppg":12.3},{"overall":16,"player":"Chris Olave","pos":"WR","team":"NO","ecr":17.4,"ecr_sd":5.9,"bye":8,"scraped":"2026-09-04","gp":16,"ppg":16.8,"floor":12.2,"ceil":20.7,"sd":7.9,"value":2,"career_ppg":13.5},{"overall":17,"player":"Trey McBride","pos":"TE","team":"ARI","ecr":18.5,"ecr_sd":5.2,"bye":14,"scraped":"2026-09-04","gp":17,"ppg":18.6,"floor":12.2,"ceil":23.6,"sd":8.4,"value":0,"career_ppg":12.4},{"overall":18,"player":"George Pickens","pos":"WR","team":"DAL","ecr":20.4,"ecr_sd":5.8,"bye":14,"scraped":"2026-09-04","gp":17,"ppg":17.2,"floor":11.8,"ceil":26.0,"sd":9.7,"value":5,"career_ppg":12.7},{"overall":19,"player":"Brock Bowers","pos":"TE","team":"LV","ecr":21.2,"ecr_sd":5.5,"bye":13,"scraped":"2026-09-04","gp":12,"ppg":14.7,"floor":9.4,"ceil":14.8,"sd":10.1,"value":0,"career_ppg":15.1},{"overall":20,"player":"De'Von Achane","pos":"RB","team":"MIA","ecr":21.5,"ecr_sd":6.7,"bye":6,"scraped":"2026-09-04","gp":16,"ppg":20.2,"floor":16.6,"ceil":20.4,"sd":7.0,"value":2,"career_ppg":18.4},{"overall":21,"player":"DeVonta Smith","pos":"WR","team":"PHI","ecr":22.7,"ecr_sd":7.2,"bye":10,"scraped":"2026-09-04","gp":17,"ppg":11.9,"floor":7.0,"ceil":16.2,"sd":7.8,"value":-17,"career_ppg":14.1},{"overall":22,"player":"Saquon Barkley","pos":"RB","team":"PHI","ecr":23.6,"ecr_sd":6.0,"bye":10,"scraped":"2026-09-04","gp":16,"ppg":14.5,"floor":9.3,"ceil":17.9,"sd":7.2,"value":-7,"career_ppg":17.6},{"overall":23,"player":"Malik Nabers","pos":"WR","team":"NYG","ecr":24.2,"ecr_sd":8.6,"bye":8,"scraped":"2026-09-04","gp":4,"ppg":14.3,"floor":3.8,"ceil":18.5,"sd":16.1,"value":null,"career_ppg":16.3},{"overall":24,"player":"Kenneth Walker III","pos":"RB","team":"KC","ecr":24.9,"ecr_sd":7.6,"bye":5,"scraped":"2026-09-04","gp":17,"ppg":11.3,"floor":6.6,"ceil":17.3,"sd":6.5,"value":-20,"career_ppg":13.6},{"overall":25,"player":"Omarion Hampton","pos":"RB","team":"LAC","ecr":25.4,"ecr_sd":7.4,"bye":7,"scraped":"2026-09-04","gp":9,"ppg":15.1,"floor":8.1,"ceil":20.0,"sd":8.1,"value":-3,"career_ppg":15.1},{"overall":26,"player":"Josh Allen","pos":"QB","team":"BUF","ecr":25.8,"ecr_sd":3.0,"bye":7,"scraped":"2026-09-04","gp":16,"ppg":22.8,"floor":16.4,"ceil":25.9,"sd":10.4,"value":0,"career_ppg":23.6},{"overall":27,"player":"Rashee Rice","pos":"WR","team":"KC","ecr":27.1,"ecr_sd":10.1,"bye":5,"scraped":"2026-09-04","gp":8,"ppg":18.8,"floor":11.5,"ceil":24.4,"sd":8.1,"value":9,"career_ppg":16.1},{"overall":28,"player":"Ashton Jeanty","pos":"RB","team":"LV","ecr":28.9,"ecr_sd":8.8,"bye":13,"scraped":"2026-09-04","gp":17,"ppg":14.4,"floor":8.2,"ceil":16.6,"sd":8.7,"value":-5,"career_ppg":14.4},{"overall":29,"player":"Zay Flowers","pos":"WR","team":"BAL","ecr":29.6,"ecr_sd":7.7,"bye":13,"scraped":"2026-09-04","gp":17,"ppg":14.3,"floor":11.4,"ceil":15.8,"sd":7.5,"value":2,"career_ppg":13.2},{"overall":30,"player":"Garrett Wilson","pos":"WR","team":"NYJ","ecr":30.3,"ecr_sd":7.2,"bye":13,"scraped":"2026-09-04","gp":7,"ppg":14.2,"floor":6.7,"ceil":21.4,"sd":9.7,"value":2,"career_ppg":13.6},{"overall":31,"player":"Lamar Jackson","pos":"QB","team":"BAL","ecr":31.8,"ecr_sd":9.3,"bye":13,"scraped":"2026-09-04","gp":13,"ppg":16.5,"floor":7.2,"ceil":25.6,"sd":9.1,"value":-14,"career_ppg":20.6},{"overall":32,"player":"Ladd McConkey","pos":"WR","team":"LAC","ecr":33.8,"ecr_sd":8.2,"bye":7,"scraped":"2026-09-04","gp":16,"ppg":11.3,"floor":4.2,"ceil":15.1,"sd":6.9,"value":-19,"career_ppg":13.2},{"overall":33,"player":"Jaylen Waddle","pos":"WR","team":"DEN","ecr":34.0,"ecr_sd":8.1,"bye":10,"scraped":"2026-09-04","gp":16,"ppg":12.1,"floor":7.0,"ceil":17.9,"sd":6.9,"value":-9,"career_ppg":12.9},{"overall":34,"player":"Tetairoa McMillan","pos":"WR","team":"CAR","ecr":35.9,"ecr_sd":7.3,"bye":5,"scraped":"2026-09-04","gp":17,"ppg":12.6,"floor":8.6,"ceil":16.0,"sd":7.1,"value":-3,"career_ppg":12.6},{"overall":35,"player":"Colston Loveland","pos":"TE","team":"CHI","ecr":36.3,"ecr_sd":11.7,"bye":10,"scraped":"2026-09-04","gp":16,"ppg":10.3,"floor":5.1,"ceil":13.4,"sd":8.5,"value":-13,"career_ppg":10.3},{"overall":36,"player":"Tee Higgins","pos":"WR","team":"CIN","ecr":36.7,"ecr_sd":6.8,"bye":6,"scraped":"2026-09-04","gp":15,"ppg":14.1,"floor":9.0,"ceil":17.0,"sd":8.2,"value":5,"career_ppg":15.0},{"overall":37,"player":"Drake Maye","pos":"QB","team":"NE","ecr":37.1,"ecr_sd":12.3,"bye":11,"scraped":"2026-09-04","gp":17,"ppg":20.7,"floor":16.0,"ceil":23.7,"sd":5.4,"value":1,"career_ppg":17.2},{"overall":38,"player":"Derrick Henry","pos":"RB","team":"BAL","ecr":37.6,"ecr_sd":7.0,"bye":13,"scraped":"2026-09-04","gp":17,"ppg":16.4,"floor":10.7,"ceil":20.2,"sd":10.0,"value":4,"career_ppg":17.4},{"overall":39,"player":"Breece Hall","pos":"RB","team":"NYJ","ecr":39.5,"ecr_sd":4.8,"bye":13,"scraped":"2026-09-04","gp":16,"ppg":13.0,"floor":6.9,"ceil":16.8,"sd":7.6,"value":-8,"career_ppg":15.4},{"overall":40,"player":"Jeremiyah Love","pos":"RB","team":"ARI","ecr":40.1,"ecr_sd":7.9,"bye":14,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null},{"overall":41,"player":"Emeka Egbuka","pos":"WR","team":"TB","ecr":40.7,"ecr_sd":8.3,"bye":10,"scraped":"2026-09-04","gp":17,"ppg":11.5,"floor":5.0,"ceil":14.5,"sd":8.4,"value":-13,"career_ppg":11.5},{"overall":42,"player":"Kyren Williams","pos":"RB","team":"LAR","ecr":42.0,"ecr_sd":6.4,"bye":11,"scraped":"2026-09-04","gp":17,"ppg":15.5,"floor":11.1,"ceil":17.7,"sd":6.1,"value":4,"career_ppg":14.4},{"overall":43,"player":"Javonte Williams","pos":"RB","team":"DAL","ecr":43.4,"ecr_sd":6.6,"bye":14,"scraped":"2026-09-04","gp":16,"ppg":15.2,"floor":11.1,"ceil":18.9,"sd":6.0,"value":4,"career_ppg":11.5},{"overall":44,"player":"Joe Burrow","pos":"QB","team":"CIN","ecr":44.9,"ecr_sd":12.9,"bye":6,"scraped":"2026-09-04","gp":8,"ppg":16.8,"floor":8.4,"ceil":21.7,"sd":8.6,"value":-11,"career_ppg":18.8},{"overall":45,"player":"Travis Etienne Jr.","pos":"RB","team":"NO","ecr":45.0,"ecr_sd":6.0,"bye":8,"scraped":"2026-09-04","gp":17,"ppg":14.9,"floor":9.5,"ceil":19.3,"sd":6.9,"value":3,"career_ppg":13.1},{"overall":46,"player":"Luther Burden III","pos":"WR","team":"CHI","ecr":46.7,"ecr_sd":8.1,"bye":10,"scraped":"2026-09-04","gp":15,"ppg":8.5,"floor":2.4,"ceil":10.1,"sd":7.5,"value":-31,"career_ppg":8.5},{"overall":47,"player":"Terry McLaurin","pos":"WR","team":"WAS","ecr":47.7,"ecr_sd":6.1,"bye":7,"scraped":"2026-09-04","gp":10,"ppg":11.4,"floor":8.7,"ceil":13.6,"sd":5.1,"value":-12,"career_ppg":13.1},{"overall":48,"player":"Davante Adams","pos":"WR","team":"LAR","ecr":50.8,"ecr_sd":7.6,"bye":11,"scraped":"2026-09-04","gp":14,"ppg":15.9,"floor":9.6,"ceil":22.4,"sd":6.8,"value":15,"career_ppg":17.1},{"overall":49,"player":"DJ Moore","pos":"WR","team":"BUF","ecr":52.4,"ecr_sd":11.9,"bye":7,"scraped":"2026-09-04","gp":17,"ppg":10.1,"floor":3.1,"ceil":12.8,"sd":8.2,"value":-19,"career_ppg":13.2},{"overall":50,"player":"D'Andre Swift","pos":"RB","team":"CHI","ecr":52.4,"ecr_sd":7.8,"bye":10,"scraped":"2026-09-04","gp":16,"ppg":14.3,"floor":9.4,"ceil":20.8,"sd":6.7,"value":1,"career_ppg":13.3},{"overall":51,"player":"Jameson Williams","pos":"WR","team":"DET","ecr":52.9,"ecr_sd":9.3,"bye":6,"scraped":"2026-09-04","gp":17,"ppg":12.9,"floor":5.7,"ceil":18.8,"sd":9.0,"value":6,"career_ppg":9.1},{"overall":52,"player":"Tyler Warren","pos":"TE","team":"IND","ecr":53.4,"ecr_sd":10.1,"bye":13,"scraped":"2026-09-04","gp":17,"ppg":11.1,"floor":7.6,"ceil":14.9,"sd":4.9,"value":-6,"career_ppg":11.1},{"overall":53,"player":"Christian Watson","pos":"WR","team":"GB","ecr":55.7,"ecr_sd":9.5,"bye":11,"scraped":"2026-09-04","gp":10,"ppg":13.2,"floor":6.8,"ceil":20.0,"sd":7.7,"value":10,"career_ppg":10.9},{"overall":54,"player":"Bucky Irving","pos":"RB","team":"TB","ecr":56.3,"ecr_sd":8.4,"bye":10,"scraped":"2026-09-04","gp":10,"ppg":13.8,"floor":8.9,"ceil":16.1,"sd":5.6,"value":1,"career_ppg":14.1},{"overall":55,"player":"Jayden Daniels","pos":"QB","team":"WAS","ecr":56.6,"ecr_sd":16.4,"bye":7,"scraped":"2026-09-04","gp":7,"ppg":16.3,"floor":16.2,"ceil":19.9,"sd":6.4,"value":-12,"career_ppg":18.6},{"overall":56,"player":"Cam Skattebo","pos":"RB","team":"NYG","ecr":57.0,"ecr_sd":8.6,"bye":8,"scraped":"2026-09-04","gp":8,"ppg":16.0,"floor":12.2,"ceil":19.8,"sd":8.6,"value":11,"career_ppg":16.0},{"overall":57,"player":"Jalen Hurts","pos":"QB","team":"PHI","ecr":57.2,"ecr_sd":12.6,"bye":10,"scraped":"2026-09-04","gp":16,"ppg":18.8,"floor":13.9,"ceil":24.1,"sd":7.6,"value":-1,"career_ppg":21.5},{"overall":58,"player":"Parker Washington","pos":"WR","team":"JAC","ecr":58.5,"ecr_sd":14.5,"bye":7,"scraped":"2026-09-04","gp":16,"ppg":11.5,"floor":5.7,"ceil":17.9,"sd":7.4,"value":-5,"career_ppg":7.8},{"overall":59,"player":"Rome Odunze","pos":"WR","team":"CHI","ecr":58.9,"ecr_sd":9.6,"bye":10,"scraped":"2026-09-04","gp":12,"ppg":12.2,"floor":5.2,"ceil":17.3,"sd":9.2,"value":3,"career_ppg":10.3},{"overall":60,"player":"Mike Evans","pos":"WR","team":"SF","ecr":59.7,"ecr_sd":12.1,"bye":8,"scraped":"2026-09-04","gp":8,"ppg":10.6,"floor":8.9,"ceil":13.5,"sd":5.8,"value":-10,"career_ppg":14.9},{"overall":61,"player":"David Montgomery","pos":"RB","team":"HOU","ecr":60.3,"ecr_sd":8.6,"bye":8,"scraped":"2026-09-04","gp":17,"ppg":9.8,"floor":6.0,"ceil":12.8,"sd":6.7,"value":-12,"career_ppg":12.9},{"overall":62,"player":"Quinshon Judkins","pos":"RB","team":"CLE","ecr":60.6,"ecr_sd":8.5,"bye":11,"scraped":"2026-09-04","gp":14,"ppg":12.1,"floor":6.8,"ceil":16.4,"sd":6.7,"value":-4,"career_ppg":12.1},{"overall":63,"player":"Caleb Williams","pos":"QB","team":"CHI","ecr":65.1,"ecr_sd":11.8,"bye":10,"scraped":"2026-09-04","gp":17,"ppg":18.7,"floor":11.8,"ceil":23.0,"sd":8.2,"value":-1,"career_ppg":16.9},{"overall":64,"player":"Bhayshul Tuten","pos":"RB","team":"JAC","ecr":66.0,"ecr_sd":9.9,"bye":7,"scraped":"2026-09-04","gp":15,"ppg":5.9,"floor":2.0,"ceil":9.1,"sd":4.9,"value":-30,"career_ppg":5.9},{"overall":65,"player":"Jadarian Price","pos":"RB","team":"SEA","ecr":67.5,"ecr_sd":10.4,"bye":11,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null},{"overall":66,"player":"Carnell Tate","pos":"WR","team":"TEN","ecr":68.2,"ecr_sd":16.7,"bye":9,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null},{"overall":67,"player":"Marvin Harrison Jr.","pos":"WR","team":"ARI","ecr":69.2,"ecr_sd":13.2,"bye":14,"scraped":"2026-09-04","gp":12,"ppg":10.7,"floor":5.1,"ceil":15.2,"sd":7.1,"value":-7,"career_ppg":11.1},{"overall":68,"player":"TreVeyon Henderson","pos":"RB","team":"NE","ecr":71.0,"ecr_sd":9.7,"bye":11,"scraped":"2026-09-04","gp":17,"ppg":12.1,"floor":5.5,"ceil":12.7,"sd":9.6,"value":0,"career_ppg":12.1},{"overall":69,"player":"Justin Herbert","pos":"QB","team":"LAC","ecr":71.8,"ecr_sd":13.5,"bye":7,"scraped":"2026-09-04","gp":16,"ppg":17.9,"floor":12.8,"ceil":25.9,"sd":7.7,"value":-3,"career_ppg":17.3},{"overall":70,"player":"Rhamondre Stevenson","pos":"RB","team":"NE","ecr":74.0,"ecr_sd":9.5,"bye":11,"scraped":"2026-09-04","gp":14,"ppg":12.8,"floor":4.8,"ceil":17.6,"sd":10.1,"value":4,"career_ppg":12.8},{"overall":71,"player":"Chris Godwin Jr.","pos":"WR","team":"TB","ecr":74.4,"ecr_sd":15.0,"bye":10,"scraped":"2026-09-04","gp":9,"ppg":9.2,"floor":5.6,"ceil":10.8,"sd":6.7,"value":-15,"career_ppg":14.0},{"overall":72,"player":"Jaylen Warren","pos":"RB","team":"PIT","ecr":74.4,"ecr_sd":8.3,"bye":9,"scraped":"2026-09-04","gp":16,"ppg":13.6,"floor":9.2,"ceil":15.6,"sd":5.6,"value":8,"career_ppg":9.8},{"overall":73,"player":"Harold Fannin Jr.","pos":"TE","team":"CLE","ecr":76.2,"ecr_sd":12.1,"bye":11,"scraped":"2026-09-04","gp":16,"ppg":11.7,"floor":8.2,"ceil":14.0,"sd":5.7,"value":-3,"career_ppg":11.7},{"overall":74,"player":"Trevor Lawrence","pos":"QB","team":"JAC","ecr":76.4,"ecr_sd":13.2,"bye":7,"scraped":"2026-09-04","gp":17,"ppg":19.9,"floor":15.0,"ceil":23.1,"sd":8.8,"value":4,"career_ppg":17.1},{"overall":75,"player":"Dak Prescott","pos":"QB","team":"DAL","ecr":77.9,"ecr_sd":12.5,"bye":14,"scraped":"2026-09-04","gp":17,"ppg":18.5,"floor":12.0,"ceil":23.3,"sd":8.3,"value":1,"career_ppg":17.4},{"overall":76,"player":"Tucker Kraft","pos":"TE","team":"GB","ecr":78.8,"ecr_sd":14.7,"bye":11,"scraped":"2026-09-04","gp":8,"ppg":14.7,"floor":8.9,"ceil":18.7,"sd":9.9,"value":2,"career_ppg":10.0},{"overall":77,"player":"Kyle Pitts Sr.","pos":"TE","team":"ATL","ecr":78.8,"ecr_sd":11.4,"bye":11,"scraped":"2026-09-04","gp":17,"ppg":12.4,"floor":5.8,"ceil":15.0,"sd":9.9,"value":2,"career_ppg":8.9},{"overall":78,"player":"DK Metcalf","pos":"WR","team":"PIT","ecr":79.4,"ecr_sd":13.0,"bye":9,"scraped":"2026-09-04","gp":15,"ppg":12.5,"floor":8.1,"ceil":15.5,"sd":6.0,"value":11,"career_ppg":13.2},{"overall":79,"player":"Brian Thomas Jr.","pos":"WR","team":"JAC","ecr":81.2,"ecr_sd":14.5,"bye":7,"scraped":"2026-09-04","gp":14,"ppg":9.9,"floor":7.6,"ceil":11.4,"sd":5.0,"value":-10,"career_ppg":13.3},{"overall":80,"player":"Michael Pittman Jr.","pos":"WR","team":"PIT","ecr":81.6,"ecr_sd":13.1,"bye":9,"scraped":"2026-09-04","gp":17,"ppg":11.9,"floor":4.0,"ceil":19.3,"sd":7.5,"value":8,"career_ppg":12.9},{"overall":81,"player":"Tony Pollard","pos":"RB","team":"TEN","ecr":85.0,"ecr_sd":10.6,"bye":9,"scraped":"2026-09-04","gp":17,"ppg":10.9,"floor":7.8,"ceil":12.1,"sd":5.6,"value":-2,"career_ppg":13.0},{"overall":82,"player":"Wan'Dale Robinson","pos":"WR","team":"TEN","ecr":85.6,"ecr_sd":12.2,"bye":9,"scraped":"2026-09-04","gp":16,"ppg":13.6,"floor":7.8,"ceil":17.4,"sd":8.2,"value":21,"career_ppg":10.5},{"overall":83,"player":"Sam LaPorta","pos":"TE","team":"DET","ecr":86.2,"ecr_sd":13.7,"bye":6,"scraped":"2026-09-04","gp":9,"ppg":11.9,"floor":6.9,"ceil":16.5,"sd":6.5,"value":1,"career_ppg":12.3},{"overall":84,"player":"Courtland Sutton","pos":"WR","team":"DEN","ecr":86.2,"ecr_sd":15.4,"bye":10,"scraped":"2026-09-04","gp":17,"ppg":12.9,"floor":8.0,"ceil":18.1,"sd":7.5,"value":17,"career_ppg":12.6},{"overall":85,"player":"Rico Dowdle","pos":"RB","team":"PIT","ecr":87.3,"ecr_sd":12.3,"bye":9,"scraped":"2026-09-04","gp":17,"ppg":12.7,"floor":5.4,"ceil":15.0,"sd":9.8,"value":6,"career_ppg":7.7},{"overall":86,"player":"Josh Downs","pos":"WR","team":"IND","ecr":88.0,"ecr_sd":14.9,"bye":13,"scraped":"2026-09-04","gp":16,"ppg":8.7,"floor":5.4,"ceil":11.5,"sd":4.7,"value":-12,"career_ppg":10.3},{"overall":87,"player":"Michael Wilson","pos":"WR","team":"ARI","ecr":88.1,"ecr_sd":15.5,"bye":14,"scraped":"2026-09-04","gp":17,"ppg":13.0,"floor":6.6,"ceil":19.9,"sd":10.6,"value":21,"career_ppg":9.9},{"overall":88,"player":"Jonathon Brooks","pos":"RB","team":"CAR","ecr":88.7,"ecr_sd":21.4,"bye":5,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":2.5},{"overall":89,"player":"Stefon Diggs","pos":"WR","team":"WAS","ecr":93.7,"ecr_sd":28.5,"bye":7,"scraped":"2026-09-04","gp":17,"ppg":12.4,"floor":5.8,"ceil":16.1,"sd":6.8,"value":17,"career_ppg":15.9},{"overall":90,"player":"Quentin Johnston","pos":"WR","team":"LAC","ecr":93.8,"ecr_sd":15.8,"bye":7,"scraped":"2026-09-04","gp":13,"ppg":13.2,"floor":9.2,"ceil":15.9,"sd":7.4,"value":24,"career_ppg":10.1},{"overall":91,"player":"RJ Harvey","pos":"RB","team":"DEN","ecr":94.7,"ecr_sd":16.6,"bye":10,"scraped":"2026-09-04","gp":17,"ppg":12.2,"floor":6.0,"ceil":19.8,"sd":7.7,"value":7,"career_ppg":12.2},{"overall":92,"player":"Brock Purdy","pos":"QB","team":"SF","ecr":96.4,"ecr_sd":10.4,"bye":8,"scraped":"2026-09-04","gp":9,"ppg":19.7,"floor":16.8,"ceil":26.2,"sd":10.3,"value":5,"career_ppg":16.9},{"overall":93,"player":"George Kittle","pos":"TE","team":"SF","ecr":97.7,"ecr_sd":12.8,"bye":8,"scraped":"2026-09-04","gp":11,"ppg":14.7,"floor":9.3,"ceil":23.1,"sd":8.3,"value":6,"career_ppg":14.1},{"overall":94,"player":"Travis Kelce","pos":"TE","team":"KC","ecr":98.2,"ecr_sd":15.0,"bye":5,"scraped":"2026-09-04","gp":17,"ppg":11.4,"floor":8.4,"ceil":14.0,"sd":6.4,"value":1,"career_ppg":14.2},{"overall":95,"player":"Kenny Gainwell","pos":"RB","team":"TB","ecr":98.3,"ecr_sd":14.3,"bye":10,"scraped":"2026-09-04","gp":17,"ppg":13.0,"floor":6.5,"ceil":19.6,"sd":9.4,"value":12,"career_ppg":7.0},{"overall":96,"player":"Jaxson Dart","pos":"QB","team":"NYG","ecr":98.3,"ecr_sd":13.7,"bye":8,"scraped":"2026-09-04","gp":14,"ppg":17.3,"floor":14.1,"ceil":24.7,"sd":10.2,"value":-2,"career_ppg":17.3},{"overall":97,"player":"Bo Nix","pos":"QB","team":"DEN","ecr":98.5,"ecr_sd":9.5,"bye":10,"scraped":"2026-09-04","gp":17,"ppg":17.9,"floor":13.4,"ceil":20.2,"sd":8.4,"value":3,"career_ppg":18.3},{"overall":98,"player":"Chuba Hubbard","pos":"RB","team":"CAR","ecr":99.8,"ecr_sd":17.3,"bye":5,"scraped":"2026-09-04","gp":15,"ppg":8.4,"floor":3.8,"ceil":9.8,"sd":6.1,"value":-8,"career_ppg":10.4},{"overall":99,"player":"Alec Pierce","pos":"WR","team":"IND","ecr":100.3,"ecr_sd":19.9,"bye":13,"scraped":"2026-09-04","gp":15,"ppg":12.2,"floor":5.7,"ceil":17.6,"sd":8.3,"value":18,"career_ppg":8.7},{"overall":100,"player":"J.K. Dobbins","pos":"RB","team":"DEN","ecr":102.4,"ecr_sd":15.5,"bye":10,"scraped":"2026-09-04","gp":10,"ppg":11.6,"floor":9.1,"ceil":15.2,"sd":4.1,"value":7,"career_ppg":12.0},{"overall":101,"player":"Patrick Mahomes II","pos":"QB","team":"KC","ecr":103.1,"ecr_sd":10.6,"bye":5,"scraped":"2026-09-04","gp":14,"ppg":20.4,"floor":13.2,"ceil":26.6,"sd":8.0,"value":10,"career_ppg":20.0},{"overall":102,"player":"Jayden Reed","pos":"WR","team":"GB","ecr":103.2,"ecr_sd":16.4,"bye":11,"scraped":"2026-09-04","gp":5,"ppg":9.7,"floor":8.1,"ceil":10.5,"sd":2.5,"value":null,"career_ppg":11.6},{"overall":103,"player":"Jared Goff","pos":"QB","team":"DET","ecr":105.5,"ecr_sd":10.8,"bye":6,"scraped":"2026-09-04","gp":17,"ppg":17.5,"floor":12.7,"ceil":20.6,"sd":7.5,"value":3,"career_ppg":17.6},{"overall":104,"player":"Matthew Stafford","pos":"QB","team":"LAR","ecr":105.9,"ecr_sd":10.2,"bye":11,"scraped":"2026-09-04","gp":17,"ppg":20.6,"floor":13.6,"ceil":26.8,"sd":7.0,"value":13,"career_ppg":15.6},{"overall":105,"player":"MarShawn Lloyd","pos":"RB","team":"GB","ecr":106.2,"ecr_sd":48.0,"bye":11,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":2.8},{"overall":106,"player":"Jakobi Meyers","pos":"WR","team":"JAC","ecr":107.9,"ecr_sd":18.3,"bye":7,"scraped":"2026-09-04","gp":16,"ppg":11.0,"floor":7.7,"ceil":13.3,"sd":4.4,"value":8,"career_ppg":13.1},{"overall":107,"player":"Jordan Addison","pos":"WR","team":"MIN","ecr":108.0,"ecr_sd":15.6,"bye":6,"scraped":"2026-09-04","gp":14,"ppg":9.7,"floor":7.0,"ceil":12.3,"sd":5.7,"value":0,"career_ppg":12.3},{"overall":108,"player":"Makai Lemon","pos":"WR","team":"PHI","ecr":108.1,"ecr_sd":20.2,"bye":10,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null},{"overall":109,"player":"KC Concepcion","pos":"WR","team":"CLE","ecr":108.2,"ecr_sd":18.1,"bye":11,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null},{"overall":110,"player":"Blake Corum","pos":"RB","team":"LAR","ecr":109.8,"ecr_sd":15.2,"bye":11,"scraped":"2026-09-04","gp":17,"ppg":7.2,"floor":2.4,"ceil":10.4,"sd":6.5,"value":-12,"career_ppg":4.7},{"overall":111,"player":"Dalton Kincaid","pos":"TE","team":"BUF","ecr":111.0,"ecr_sd":12.7,"bye":7,"scraped":"2026-09-04","gp":12,"ppg":10.5,"floor":6.2,"ceil":15.3,"sd":6.6,"value":-3,"career_ppg":9.2},{"overall":112,"player":"Rachaad White","pos":"RB","team":"WAS","ecr":112.3,"ecr_sd":16.1,"bye":7,"scraped":"2026-09-04","gp":17,"ppg":8.4,"floor":5.2,"ceil":8.6,"sd":5.5,"value":-3,"career_ppg":11.4},{"overall":113,"player":"Jordan Mason","pos":"RB","team":"MIN","ecr":113.6,"ecr_sd":18.1,"bye":6,"scraped":"2026-09-04","gp":16,"ppg":8.1,"floor":4.2,"ceil":10.7,"sd":5.5,"value":-5,"career_ppg":5.8},{"overall":114,"player":"Kyler Murray","pos":"QB","team":"MIN","ecr":113.7,"ecr_sd":9.4,"bye":6,"scraped":"2026-09-04","gp":5,"ppg":15.6,"floor":14.1,"ceil":16.1,"sd":1.8,"value":null,"career_ppg":17.4},{"overall":115,"player":"Jacory Croskey-Merritt","pos":"RB","team":"WAS","ecr":114.5,"ecr_sd":15.8,"bye":7,"scraped":"2026-09-04","gp":17,"ppg":8.3,"floor":3.0,"ceil":10.1,"sd":7.5,"value":-3,"career_ppg":8.3},{"overall":116,"player":"Jordan Love","pos":"QB","team":"GB","ecr":116.4,"ecr_sd":8.9,"bye":11,"scraped":"2026-09-04","gp":15,"ppg":15.7,"floor":10.1,"ceil":20.1,"sd":7.4,"value":-3,"career_ppg":13.2},{"overall":117,"player":"Aaron Jones Sr.","pos":"RB","team":"MIN","ecr":117.8,"ecr_sd":16.0,"bye":6,"scraped":"2026-09-04","gp":12,"ppg":9.9,"floor":7.0,"ceil":12.7,"sd":4.5,"value":8,"career_ppg":12.7},{"overall":118,"player":"Baker Mayfield","pos":"QB","team":"TB","ecr":118.5,"ecr_sd":9.0,"bye":10,"scraped":"2026-09-04","gp":17,"ppg":16.0,"floor":12.7,"ceil":19.6,"sd":6.2,"value":0,"career_ppg":15.9},{"overall":119,"player":"Isaiah Likely","pos":"TE","team":"NYG","ecr":118.6,"ecr_sd":26.7,"bye":8,"scraped":"2026-09-04","gp":12,"ppg":5.1,"floor":2.5,"ceil":6.5,"sd":4.1,"value":-29,"career_ppg":6.8},{"overall":120,"player":"Dallas Goedert","pos":"TE","team":"PHI","ecr":119.4,"ecr_sd":17.1,"bye":10,"scraped":"2026-09-04","gp":15,"ppg":12.3,"floor":6.5,"ceil":16.8,"sd":7.2,"value":7,"career_ppg":11.1},{"overall":121,"player":"Jake Ferguson","pos":"TE","team":"DAL","ecr":119.9,"ecr_sd":19.2,"bye":14,"scraped":"2026-09-04","gp":17,"ppg":11.1,"floor":7.3,"ceil":16.8,"sd":7.1,"value":3,"career_ppg":8.3},{"overall":122,"player":"Kyle Monangai","pos":"RB","team":"CHI","ecr":120.0,"ecr_sd":14.1,"bye":10,"scraped":"2026-09-04","gp":17,"ppg":8.6,"floor":3.3,"ceil":10.8,"sd":6.3,"value":4,"career_ppg":8.6},{"overall":123,"player":"De'Zhaun Stribling","pos":"WR","team":"SF","ecr":121.5,"ecr_sd":34.9,"bye":8,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null},{"overall":124,"player":"Khalil Shakir","pos":"WR","team":"BUF","ecr":122.6,"ecr_sd":16.4,"bye":7,"scraped":"2026-09-04","gp":16,"ppg":10.4,"floor":7.1,"ceil":13.2,"sd":5.8,"value":8,"career_ppg":8.3},{"overall":125,"player":"Matthew Golden","pos":"WR","team":"GB","ecr":124.8,"ecr_sd":20.2,"bye":11,"scraped":"2026-09-04","gp":14,"ppg":5.0,"floor":1.9,"ceil":8.3,"sd":4.3,"value":-36,"career_ppg":5.0},{"overall":126,"player":"Jalen Coker","pos":"WR","team":"CAR","ecr":124.9,"ecr_sd":15.2,"bye":5,"scraped":"2026-09-04","gp":11,"ppg":8.2,"floor":4.3,"ceil":12.6,"sd":5.9,"value":-2,"career_ppg":8.3},{"overall":127,"player":"Tyler Shough","pos":"QB","team":"NO","ecr":125.2,"ecr_sd":12.5,"bye":8,"scraped":"2026-09-04","gp":11,"ppg":14.4,"floor":8.6,"ceil":20.1,"sd":7.7,"value":-3,"career_ppg":14.4},{"overall":128,"player":"Romeo Doubs","pos":"WR","team":"NE","ecr":126.9,"ecr_sd":15.1,"bye":11,"scraped":"2026-09-04","gp":16,"ppg":10.3,"floor":5.3,"ceil":12.3,"sd":7.3,"value":10,"career_ppg":9.6},{"overall":129,"player":"Juwan Johnson","pos":"TE","team":"NO","ecr":127.7,"ecr_sd":19.3,"bye":8,"scraped":"2026-09-04","gp":17,"ppg":10.6,"floor":7.1,"ceil":13.5,"sd":4.8,"value":3,"career_ppg":8.7},{"overall":130,"player":"Malik Willis","pos":"QB","team":"MIA","ecr":128.8,"ecr_sd":18.8,"bye":6,"scraped":"2026-09-04","gp":4,"ppg":12.8,"floor":4.5,"ceil":17.8,"sd":13.5,"value":null,"career_ppg":6.4},{"overall":131,"player":"Xavier Worthy","pos":"WR","team":"KC","ecr":129.8,"ecr_sd":14.2,"bye":5,"scraped":"2026-09-04","gp":14,"ppg":7.8,"floor":5.6,"ceil":10.5,"sd":4.5,"value":-3,"career_ppg":9.8},{"overall":132,"player":"Mark Andrews","pos":"TE","team":"BAL","ecr":133.6,"ecr_sd":23.7,"bye":13,"scraped":"2026-09-04","gp":17,"ppg":7.7,"floor":3.4,"ceil":10.0,"sd":6.8,"value":-11,"career_ppg":11.3},{"overall":133,"player":"Woody Marks","pos":"RB","team":"HOU","ecr":135.8,"ecr_sd":13.9,"bye":8,"scraped":"2026-09-04","gp":16,"ppg":9.1,"floor":4.8,"ceil":13.2,"sd":6.9,"value":6,"career_ppg":9.1},{"overall":134,"player":"Tyler Allgeier","pos":"RB","team":"ARI","ecr":136.5,"ecr_sd":13.6,"bye":14,"scraped":"2026-09-04","gp":17,"ppg":7.2,"floor":2.3,"ceil":10.8,"sd":5.3,"value":-4,"career_ppg":7.9},{"overall":135,"player":"Sam Darnold","pos":"QB","team":"SEA","ecr":138.3,"ecr_sd":12.9,"bye":11,"scraped":"2026-09-04","gp":17,"ppg":13.8,"floor":6.1,"ceil":19.5,"sd":8.0,"value":-3,"career_ppg":12.2},{"overall":136,"player":"Jordyn Tyson","pos":"WR","team":"NO","ecr":138.6,"ecr_sd":30.4,"bye":8,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null},{"overall":137,"player":"Tyjae Spears","pos":"RB","team":"TEN","ecr":140.4,"ecr_sd":15.6,"bye":9,"scraped":"2026-09-04","gp":13,"ppg":8.6,"floor":6.5,"ceil":9.2,"sd":5.6,"value":6,"career_ppg":9.0},{"overall":138,"player":"Deebo Samuel Sr.","pos":"WR","team":"SF","ecr":140.7,"ecr_sd":30.3,"bye":8,"scraped":"2026-09-04","gp":16,"ppg":11.8,"floor":6.2,"ceil":18.1,"sd":6.9,"value":25,"career_ppg":12.8},{"overall":139,"player":"Chris Rodriguez Jr.","pos":"RB","team":"JAC","ecr":141.1,"ecr_sd":17.7,"bye":7,"scraped":"2026-09-04","gp":12,"ppg":7.7,"floor":4.9,"ceil":10.7,"sd":4.8,"value":0,"career_ppg":5.5},{"overall":140,"player":"C.J. Stroud","pos":"QB","team":"HOU","ecr":143.2,"ecr_sd":13.0,"bye":8,"scraped":"2026-09-04","gp":14,"ppg":14.9,"floor":10.6,"ceil":18.1,"sd":6.5,"value":1,"career_ppg":15.4},{"overall":141,"player":"Daniel Jones","pos":"QB","team":"IND","ecr":146.4,"ecr_sd":20.5,"bye":13,"scraped":"2026-09-04","gp":13,"ppg":17.4,"floor":15.5,"ceil":22.5,"sd":7.1,"value":11,"career_ppg":14.6},{"overall":142,"player":"Rashid Shaheed","pos":"WR","team":"SEA","ecr":147.0,"ecr_sd":17.4,"bye":11,"scraped":"2026-09-04","gp":18,"ppg":8.7,"floor":3.7,"ceil":12.0,"sd":5.8,"value":7,"career_ppg":10.3},{"overall":143,"player":"Josh Jacobs","pos":"RB","team":"GB","ecr":148.0,"ecr_sd":66.6,"bye":11,"scraped":"2026-09-04","gp":15,"ppg":15.8,"floor":11.2,"ceil":19.9,"sd":9.0,"value":36,"career_ppg":16.6},{"overall":144,"player":"Dylan Sampson","pos":"RB","team":"CLE","ecr":149.0,"ecr_sd":19.7,"bye":11,"scraped":"2026-09-04","gp":15,"ppg":5.8,"floor":1.6,"ceil":8.8,"sd":5.6,"value":-8,"career_ppg":5.8},{"overall":145,"player":"Jonah Coleman","pos":"RB","team":"DEN","ecr":149.4,"ecr_sd":19.3,"bye":10,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null},{"overall":146,"player":"Mike Washington Jr.","pos":"RB","team":"LV","ecr":152.5,"ecr_sd":26.2,"bye":13,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null},{"overall":147,"player":"Keaton Mitchell","pos":"RB","team":"LAC","ecr":152.5,"ecr_sd":27.6,"bye":7,"scraped":"2026-09-04","gp":13,"ppg":4.3,"floor":2.3,"ceil":6.6,"sd":3.3,"value":-14,"career_ppg":5.3},{"overall":148,"player":"Denzel Boston","pos":"WR","team":"CLE","ecr":153.8,"ecr_sd":29.8,"bye":11,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null},{"overall":149,"player":"Zach Charbonnet","pos":"RB","team":"SEA","ecr":156.2,"ecr_sd":28.1,"bye":11,"scraped":"2026-09-04","gp":16,"ppg":11.3,"floor":6.4,"ceil":15.1,"sd":6.7,"value":23,"career_ppg":9.7},{"overall":150,"player":"Cam Ward","pos":"QB","team":"TEN","ecr":158.8,"ecr_sd":24.1,"bye":9,"scraped":"2026-09-04","gp":17,"ppg":11.0,"floor":6.9,"ceil":13.1,"sd":5.4,"value":-10,"career_ppg":11.0},{"overall":151,"player":"Tre Tucker","pos":"WR","team":"LV","ecr":159.0,"ecr_sd":27.0,"bye":13,"scraped":"2026-09-04","gp":17,"ppg":9.5,"floor":5.0,"ceil":11.1,"sd":8.9,"value":12,"career_ppg":7.5},{"overall":152,"player":"Brenton Strange","pos":"TE","team":"JAC","ecr":160.9,"ecr_sd":25.2,"bye":7,"scraped":"2026-09-04","gp":12,"ppg":9.8,"floor":5.5,"ceil":13.7,"sd":4.7,"value":-1,"career_ppg":6.1},{"overall":153,"player":"Dalton Schultz","pos":"TE","team":"HOU","ecr":162.1,"ecr_sd":22.7,"bye":8,"scraped":"2026-09-04","gp":17,"ppg":10.5,"floor":5.8,"ceil":13.7,"sd":5.6,"value":3,"career_ppg":9.2},{"overall":154,"player":"Chig Okonkwo","pos":"TE","team":"WAS","ecr":163.0,"ecr_sd":22.8,"bye":7,"scraped":"2026-09-04","gp":17,"ppg":7.3,"floor":4.0,"ceil":9.3,"sd":4.5,"value":-11,"career_ppg":6.8},{"overall":155,"player":"Hunter Henry","pos":"TE","team":"NE","ecr":167.1,"ecr_sd":25.8,"bye":11,"scraped":"2026-09-04","gp":17,"ppg":10.5,"floor":6.6,"ceil":11.9,"sd":7.3,"value":7,"career_ppg":8.8},{"overall":156,"player":"Alvin Kamara","pos":"RB","team":"NO","ecr":168.3,"ecr_sd":34.5,"bye":8,"scraped":"2026-09-04","gp":11,"ppg":9.2,"floor":6.2,"ceil":13.2,"sd":4.9,"value":18,"career_ppg":15.0},{"overall":157,"player":"Adonai Mitchell","pos":"WR","team":"NYJ","ecr":169.0,"ecr_sd":26.1,"bye":13,"scraped":"2026-09-04","gp":16,"ppg":5.5,"floor":1.3,"ceil":6.5,"sd":6.8,"value":-23,"career_ppg":4.3},{"overall":158,"player":"Bryce Young","pos":"QB","team":"CAR","ecr":169.5,"ecr_sd":27.8,"bye":5,"scraped":"2026-09-04","gp":16,"ppg":13.6,"floor":8.7,"ceil":17.8,"sd":7.7,"value":0,"career_ppg":12.4},{"overall":159,"player":"Kayshon Boutte","pos":"WR","team":"HOU","ecr":169.8,"ecr_sd":26.1,"bye":8,"scraped":"2026-09-04","gp":14,"ppg":8.9,"floor":3.6,"ceil":13.5,"sd":7.4,"value":12,"career_ppg":6.1},{"overall":160,"player":"Jerry Jeudy","pos":"WR","team":"CLE","ecr":170.2,"ecr_sd":28.1,"bye":11,"scraped":"2026-09-04","gp":17,"ppg":7.1,"floor":3.7,"ceil":9.3,"sd":5.2,"value":-1,"career_ppg":10.9},{"overall":161,"player":"Tank Bigsby","pos":"RB","team":"PHI","ecr":170.7,"ecr_sd":25.5,"bye":10,"scraped":"2026-09-04","gp":15,"ppg":3.6,"floor":0.2,"ceil":4.5,"sd":5.2,"value":-17,"career_ppg":4.5},{"overall":162,"player":"Tyrone Tracy Jr.","pos":"RB","team":"NYG","ecr":173.8,"ecr_sd":41.6,"bye":8,"scraped":"2026-09-04","gp":15,"ppg":10.7,"floor":6.2,"ceil":13.3,"sd":7.7,"value":23,"career_ppg":10.7},{"overall":163,"player":"Jauan Jennings","pos":"WR","team":"MIN","ecr":175.6,"ecr_sd":33.4,"bye":6,"scraped":"2026-09-04","gp":15,"ppg":11.6,"floor":7.3,"ceil":16.1,"sd":5.7,"value":31,"career_ppg":8.7},{"overall":164,"player":"Jalen McMillan","pos":"WR","team":"TB","ecr":175.8,"ecr_sd":26.1,"bye":10,"scraped":"2026-09-04","gp":4,"ppg":7.5,"floor":3.2,"ceil":8.9,"sd":7.4,"value":null,"career_ppg":8.9},{"overall":165,"player":"Braelon Allen","pos":"RB","team":"NYJ","ecr":177.6,"ecr_sd":28.9,"bye":13,"scraped":"2026-09-04","gp":4,"ppg":3.8,"floor":1.0,"ceil":6.8,"sd":3.4,"value":null,"career_ppg":4.4},{"overall":166,"player":"Omar Cooper Jr.","pos":"WR","team":"NYJ","ecr":181.6,"ecr_sd":34.9,"bye":13,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null},{"overall":167,"player":"Tre' Harris","pos":"WR","team":"LAC","ecr":182.1,"ecr_sd":30.3,"bye":7,"scraped":"2026-09-04","gp":16,"ppg":4.3,"floor":2.4,"ceil":6.2,"sd":2.9,"value":-28,"career_ppg":4.3},{"overall":168,"player":"Brian Robinson Jr.","pos":"RB","team":"ATL","ecr":182.4,"ecr_sd":25.0,"bye":11,"scraped":"2026-09-04","gp":17,"ppg":3.7,"floor":2.1,"ceil":3.8,"sd":3.2,"value":-13,"career_ppg":9.4},{"overall":169,"player":"Dontayvion Wicks","pos":"WR","team":"PHI","ecr":182.8,"ecr_sd":32.6,"bye":10,"scraped":"2026-09-04","gp":13,"ppg":5.8,"floor":1.9,"ceil":5.2,"sd":7.0,"value":-11,"career_ppg":6.8},{"overall":170,"player":"Emmett Johnson","pos":"RB","team":"KC","ecr":183.8,"ecr_sd":37.8,"bye":5,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null},{"overall":171,"player":"Pat Bryant","pos":"WR","team":"DEN","ecr":184.6,"ecr_sd":27.5,"bye":10,"scraped":"2026-09-04","gp":13,"ppg":5.8,"floor":3.8,"ceil":7.2,"sd":4.1,"value":-11,"career_ppg":5.8},{"overall":172,"player":"Ryan Flournoy","pos":"WR","team":"DAL","ecr":185.7,"ecr_sd":29.7,"bye":14,"scraped":"2026-09-04","gp":15,"ppg":7.6,"floor":2.9,"ceil":9.5,"sd":7.2,"value":11,"career_ppg":4.8},{"overall":173,"player":"T.J. Hockenson","pos":"TE","team":"MIN","ecr":188.0,"ecr_sd":27.9,"bye":6,"scraped":"2026-09-04","gp":15,"ppg":7.5,"floor":4.5,"ceil":10.1,"sd":4.0,"value":-8,"career_ppg":10.9},{"overall":174,"player":"Malik Washington","pos":"WR","team":"MIA","ecr":189.2,"ecr_sd":35.3,"bye":6,"scraped":"2026-09-04","gp":17,"ppg":6.9,"floor":4.1,"ceil":9.3,"sd":3.3,"value":5,"career_ppg":5.5},{"overall":175,"player":"Ray Davis","pos":"RB","team":"BUF","ecr":190.4,"ecr_sd":33.2,"bye":7,"scraped":"2026-09-04","gp":17,"ppg":3.8,"floor":0.1,"ceil":5.4,"sd":6.3,"value":-9,"career_ppg":5.3},{"overall":176,"player":"Keenan Allen","pos":"WR","team":"IND","ecr":192.2,"ecr_sd":53.8,"bye":13,"scraped":"2026-09-04","gp":17,"ppg":10.7,"floor":6.7,"ceil":10.8,"sd":6.8,"value":33,"career_ppg":15.2},{"overall":177,"player":"Isiah Pacheco","pos":"RB","team":"DET","ecr":192.3,"ecr_sd":43.4,"bye":6,"scraped":"2026-09-04","gp":13,"ppg":6.7,"floor":3.9,"ceil":8.6,"sd":3.9,"value":10,"career_ppg":9.5},{"overall":178,"player":"Jalen Nailor","pos":"WR","team":"LV","ecr":194.4,"ecr_sd":32.3,"bye":13,"scraped":"2026-09-04","gp":17,"ppg":5.9,"floor":0.0,"ceil":7.2,"sd":6.7,"value":-5,"career_ppg":4.8},{"overall":179,"player":"Jacoby Brissett","pos":"QB","team":"ARI","ecr":196.7,"ecr_sd":38.7,"bye":14,"scraped":"2026-09-04","gp":14,"ppg":16.2,"floor":15.8,"ceil":20.4,"sd":7.6,"value":9,"career_ppg":11.5},{"overall":180,"player":"Travis Hunter","pos":"WR","team":"JAC","ecr":197.6,"ecr_sd":38.5,"bye":7,"scraped":"2026-09-04","gp":null,"ppg":null,"floor":null,"ceil":null,"sd":null,"value":null,"career_ppg":null}];
+const COLS=[{k:'pick',t:'',cls:'pick'},{k:'overall',t:'#'},{k:'player',t:'Player',cls:'l'},
+ {k:'pos',t:'Pos',cls:'l'},{k:'bye',t:'Bye'},{k:'ecr',t:'ECR'},{k:'ppg',t:'2025 PPG'},
+ {k:'range',t:'Floor-Ceiling'},{k:'sd',t:'Swing'},{k:'gp',t:'GP'},
+ {k:'career_ppg',t:'Career PPG'},{k:'value',t:'Value'}];
+const KEY='draftboard.v1.drafted';
+let sortKey='overall',sortDir=1,posFilter='ALL',q='',hideDrafted=false;
+
+// Persisted so a refresh mid-draft does not wipe the board. Storage can throw in a
+// sandboxed frame, so every access is guarded and the page still works without it.
+let drafted=new Set();
+try{const raw=localStorage.getItem(KEY); if(raw) drafted=new Set(JSON.parse(raw));}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify([...drafted]));}catch(e){}}
+const idOf=d=>d.player+'|'+d.pos;
+
+const maxCeil={};
+DATA.forEach(d=>{if(d.ceil!=null)maxCeil[d.pos]=Math.max(maxCeil[d.pos]||0,d.ceil)});
+
+function view(){
+  let r=DATA.filter(d=>(posFilter==='ALL'||d.pos===posFilter));
+  if(hideDrafted) r=r.filter(d=>!drafted.has(idOf(d)));
+  if(q){const s=q.toLowerCase();
+    r=r.filter(d=>d.player.toLowerCase().includes(s)||(d.team||'').toLowerCase().includes(s));}
+  const k=sortKey==='range'?'ppg':(sortKey==='pick'?'overall':sortKey);
+  return r.slice().sort((a,b)=>{let x=a[k],y=b[k];
+    if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1;
+    if(typeof x==='string')return x.localeCompare(y)*sortDir;
+    return (x-y)*sortDir;});
+}
+function num(v,d){return v==null?'<span class="na">-</span>':(d?v.toFixed(1):v)}
+function valCell(v){if(v==null)return '<span class="na">-</span>';
+  const c=v>0?'p':(v<0?'n':'z'); return '<span class="val '+c+'">'+(v>0?'+':'')+v+'</span>';}
+function rangeCell(d){
+  if(d.ppg==null)return '<span class="na">no 2025 data</span>';
+  const m=maxCeil[d.pos]||1;
+  const f=Math.max(0,(d.floor??0)/m*100),c=Math.min(100,(d.ceil??0)/m*100),
+        p=Math.min(100,d.ppg/m*100);
+  return '<div class="range '+d.pos+'"><div class="track"></div><div class="span" style="left:'
+    +f+'%;width:'+Math.max(1,c-f)+'%"></div><div class="dot" style="left:'+p+'%"></div></div>';
+}
+function counts(){
+  const total=DATA.length, gone=DATA.filter(d=>drafted.has(idOf(d))).length;
+  const byPos={};
+  ['QB','RB','WR','TE'].forEach(p=>{
+    byPos[p]=DATA.filter(d=>d.pos===p&&!drafted.has(idOf(d))).length;});
+  return {total,gone,left:total-gone,byPos};
+}
+function render(){
+  const rows=view(), c=counts();
+  document.getElementById('count').innerHTML=
+    '<b>'+c.left+'</b> available &middot; '+c.gone+' drafted &middot; showing '+rows.length;
+  document.getElementById('tile-left').textContent=c.left;
+  document.getElementById('tile-gone').textContent=c.gone;
+  document.getElementById('tb').innerHTML=rows.map(d=>{
+    const on=drafted.has(idOf(d));
+    return '<tr tabindex="0" data-id="'+idOf(d).replace(/"/g,'&quot;')+'"'+
+      (on?' class="drafted"':'')+' aria-label="'+d.player+(on?', drafted':', available')+'">'+
+      '<td class="pick"><button class="box" aria-pressed="'+on+'" tabindex="-1" '+
+        'aria-label="Mark '+d.player+' drafted"></button></td>'+
+      '<td class="rank">'+d.overall+'</td>'+
+      '<td class="l"><span class="nm">'+d.player+'</span><span class="tm">'+(d.team||'FA')+'</span></td>'+
+      '<td class="l"><span class="pos '+d.pos+'">'+d.pos+'</span></td>'+
+      '<td class="dim">'+num(d.bye)+'</td><td class="dim">'+num(d.ecr,1)+'</td>'+
+      '<td><strong>'+num(d.ppg,1)+'</strong></td>'+
+      '<td class="rangecell">'+rangeCell(d)+'</td>'+
+      '<td class="dim">'+num(d.sd,1)+'</td><td class="dim">'+num(d.gp)+'</td>'+
+      '<td class="dim">'+num(d.career_ppg,1)+'</td><td>'+valCell(d.value)+'</td></tr>';
+  }).join('');
+  document.querySelectorAll('th button').forEach(b=>
+    b.dataset.active=(b.dataset.k===sortKey)?'1':'0');
+}
+function toggle(id){
+  if(drafted.has(id)) drafted.delete(id); else drafted.add(id);
+  save(); render();
+}
+document.getElementById('th').innerHTML='<tr>'+COLS.map(c=>
+  '<th class="'+(c.cls||'')+'">'+(c.k==='pick'?'':'<button data-k="'+c.k+'">'+c.t+'</button>')
+  +'</th>').join('')+'</tr>';
+document.querySelectorAll('th button').forEach(b=>b.onclick=()=>{
+  const k=b.dataset.k;
+  if(sortKey===k){sortDir*=-1}
+  else{sortKey=k;sortDir=(k==='overall'||k==='ecr'||k==='player')?1:-1}
+  render();});
+// Whole row is the hit target -- a pick clock is no place for precision clicking.
+const tb=document.getElementById('tb');
+tb.addEventListener('click',e=>{
+  const tr=e.target.closest('tr'); if(tr&&tr.dataset.id) toggle(tr.dataset.id);});
+tb.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const tr=e.target.closest('tr'); if(!tr||!tr.dataset.id)return;
+  e.preventDefault(); toggle(tr.dataset.id);});
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{
+  posFilter=b.dataset.p;
+  document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  render();});
+const hb=document.getElementById('hide');
+hb.onclick=()=>{hideDrafted=!hideDrafted;hb.setAttribute('aria-pressed',hideDrafted);render();};
+document.getElementById('reset').onclick=()=>{
+  if(!drafted.size)return;
+  if(confirm('Clear all '+drafted.size+' drafted players? This starts a fresh board.')){
+    drafted.clear();save();render();}};
+document.getElementById('q').oninput=e=>{q=e.target.value;render()};
+render();
+</script>

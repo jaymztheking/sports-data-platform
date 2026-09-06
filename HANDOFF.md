@@ -58,7 +58,7 @@ samples are a separate PR 2 — see `roadmap/planned/S007-ingest-widening.md`.
 |------|---------|
 | active | `S007` ingest widening (PR 1 built, not yet merged) |
 | completed | `S001` foundation · `S002` dbt scaffold · `S003` ingest · `S003A` history window · `S004` staging · `S005A` `fct_player_season` draft board |
-| planned | `S007` PR 2 (ADP ingest + snapshotting) → **`S016`–`S018` our own projections** (features → backtest → model) · `S006` CI + branch protection (post-draft) |
+| planned | **`S019`** ESPN league sync (league-accurate scoring + rosters) · `S007` PR 2 (ADP ingest + snapshotting) → **`S016`–`S018` our own projections** (features → backtest → model) · `S006` CI + branch protection (post-draft) |
 | deferred | `S005` `fct_player_week` → post-draft (in-season product) |
 | backlog | `S008`–`S010` broaden products · `S011`–`S015` prod on k3s + BI + schedule |
 
