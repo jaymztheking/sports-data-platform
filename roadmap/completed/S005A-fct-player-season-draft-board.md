@@ -60,4 +60,17 @@ not ingested until S007), projections, and any modelling. This is descriptive.
 
 ## Definition of Done
 `fct_player_season` builds under an enforced contract, and James can query it to rank
-players by value-over-ADP before the 2026-09-05 draft.
+players by value-over-**ECR** before the 2026-09-05 draft. (This feed carries no ADP
+column — ADP arrives separately in S007. The mart's metric is `value_over_ecr`.)
+
+## Follow-up fix — `player_join_key` exposed (2026-09-06)
+The mart computed `player_join_key`, used it to join `int_draft_board`, then dropped it in
+the explicit select of the `joined` CTE, so it never reached the output. That made the
+rookie workaround unrunnable: gsis ids do not reach ffverse, and the only bridge between
+them was discarded inside the model — building the published board meant routing back
+through `stg_nfl__player_stats` to recover the key.
+
+Now a contracted `varchar` with a `not_null` test. The board-first left join works as
+intended: **180 draftable players, 165 with production, 15 rookies visible** (Jeremiyah
+Love at board rank 41 among them), with no fan-out — counts match the published board, so
+the Isaiah Williams dedupe still holds through the join.

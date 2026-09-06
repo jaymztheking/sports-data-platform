@@ -99,6 +99,10 @@ joined as (
         p.player_display_name,
         p.player_position,
         p.team,
+        -- Exposed deliberately: this is the only key that reaches int_draft_board, and
+        -- without it the documented "left-join from the board to see rookies" is
+        -- impossible without routing back through staging. gsis ids do not reach ffverse.
+        p.player_join_key,
 
         p.games_played,
         p.fantasy_points_total,
@@ -174,6 +178,7 @@ select
     player_display_name,
     player_position,
     team,
+    player_join_key,
     cast(games_played as integer) as games_played,
     cast(fantasy_points_total as {{ dbt.type_numeric() }}) as fantasy_points_total,
     cast(fantasy_points_per_game as {{ dbt.type_numeric() }}) as fantasy_points_per_game,
