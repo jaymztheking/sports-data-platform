@@ -52,6 +52,28 @@ models:
       - name: away_team
         data_tests: [not_null]
 
+  - name: stg_nfl__fp_rankings
+    description: >
+      FantasyPros consensus rankings per scoring format. Ranking a league against the
+      wrong format's consensus is wrong at the first pick, so format is part of the grain.
+    columns:
+      - name: scoring_format
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['standard', 'half_ppr', 'ppr']
+      - name: player_join_key
+        data_tests: [not_null]
+      - name: ecr
+        data_tests: [not_null]
+      - name: player_position
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['QB', 'RB', 'WR', 'TE']
+
   - name: stg_nfl__ff_rankings
     description: >
       FantasyPros consensus draft board, filtered to redraft-overall (`ecr_type = 'ro'`).

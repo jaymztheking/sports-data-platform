@@ -199,7 +199,7 @@ board_ranked as (
     select
         *,
         row_number() over (
-            partition by player_position order by ecr
+            partition by scoring_format, player_position order by ecr
         ) as ecr_position_rank
     from board
 
@@ -248,6 +248,9 @@ joined as (
         on
             p.player_join_key = b.player_join_key
             and p.player_position = b.player_position
+            -- Consensus rank is scoring-specific; joining across formats would rank a
+            -- standard league against PPR consensus.
+            and p.scoring_format = b.scoring_format
     left join replacement as r
         on
             p.season = r.season

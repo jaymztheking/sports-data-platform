@@ -12,3 +12,12 @@ seeds:
         data_tests: [not_null, unique]
       - name: teams
         data_tests: [not_null]
+      - name: consensus_format
+        description: >
+          Which FantasyPros board this league's rules map onto. FantasyPros publishes
+          STD / HALF / PPR only, so `kiddy` (standard scoring) draws on `standard`.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['standard', 'half_ppr', 'ppr']

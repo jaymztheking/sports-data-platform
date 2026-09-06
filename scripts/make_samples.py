@@ -69,7 +69,25 @@ def main() -> int:
     fr = pl.concat([matched, extras]).sort("ecr")
     fr.write_parquet(SAMPLES / "ff_rankings.parquet")
 
-    for name, df in (("player_stats", ps), ("schedules", sc), ("ff_rankings", fr)):
+    # FantasyPros boards -- every scoring format, so CI exercises the per-format join.
+    # Narrowed to players the stats slice covers, plus a shallow tail per format.
+    fp_all = pl.read_parquet(RAW / "fp_rankings.parquet")
+    fp_keep = fp_all.filter(norm("player_name").is_in(sampled_players))
+    fp_tail = (
+        fp_all.filter(~norm("player_name").is_in(sampled_players))
+        .sort("rank_ave")
+        .group_by("scoring_format")
+        .head(EXTRA_RANKINGS)
+    )
+    fp = pl.concat([fp_keep, fp_tail]).sort(["scoring_format", "rank_ave"])
+    fp.write_parquet(SAMPLES / "fp_rankings.parquet")
+
+    for name, df in (
+        ("player_stats", ps),
+        ("schedules", sc),
+        ("ff_rankings", fr),
+        ("fp_rankings", fp),
+    ):
         print(f"{name}: {df.height} rows x {df.width} cols")
     return 0
 

@@ -47,9 +47,7 @@ def _fetch_one_season(season: int, teams: int, scoring_format: str) -> pl.DataFr
     )
 
 
-def fetch_adp_ffc(
-    seasons: list[int], teams: int = 12, scoring_format: str = "ppr"
-) -> pl.DataFrame:
+def fetch_adp_ffc(seasons: list[int], teams: int = 12, scoring_format: str = "ppr") -> pl.DataFrame:
     """Return FFC ADP for ``seasons`` with metadata columns added."""
     frames = [_fetch_one_season(season, teams, scoring_format) for season in seasons]
     df = pl.concat(frames, how="diagonal_relaxed")
