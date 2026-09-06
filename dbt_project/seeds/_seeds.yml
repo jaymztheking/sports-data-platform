@@ -11,7 +11,7 @@ seeds:
           - not_null
           - accepted_values:
               arguments:
-                values: ['standard', 'half_ppr', 'ppr']
+                values: ['standard', 'half_ppr', 'ppr', 'kiddy']
       - name: stat
         data_tests: [not_null]
       - name: points_per_unit

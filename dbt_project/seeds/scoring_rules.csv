@@ -32,3 +32,14 @@ ppr,receiving_tds,6
 ppr,fumbles_lost,-2
 ppr,special_teams_tds,6
 ppr,two_point_conversions,2
+kiddy,passing_yards,0.04
+kiddy,passing_tds,6
+kiddy,interceptions,-2
+kiddy,rushing_yards,0.1
+kiddy,rushing_tds,6
+kiddy,receptions,0
+kiddy,receiving_yards,0.1
+kiddy,receiving_tds,6
+kiddy,fumbles_lost,0
+kiddy,special_teams_tds,0
+kiddy,two_point_conversions,2
