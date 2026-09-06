@@ -1,0 +1,14 @@
+version: 2
+
+seeds:
+  - name: league_settings
+    description: >
+      Starting-lineup shape per league, which is what sets replacement level. Both of
+      James's leagues are 12-team with identical starters (1 QB / 2 RB / 2 WR / 1 TE /
+      1 FLEX), so they differ only by scoring — which is why `scoring_format` is the key
+      rather than a separate league dimension. Split them if that ever stops being true.
+    columns:
+      - name: scoring_format
+        data_tests: [not_null, unique]
+      - name: teams
+        data_tests: [not_null]
