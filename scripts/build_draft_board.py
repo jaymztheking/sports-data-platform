@@ -69,9 +69,11 @@ FORMAT_BUTTON = {"kiddy": "Kiddy", "ppr": "PPR", "half_ppr": "Half", "standard":
 
 SCORING_LABEL = {
     "kiddy": "Kiddy league rules &mdash; standard scoring, 6-pt passing TDs",
-    "ppr": "PPR &mdash; generic, not a league's real rules",
-    "half_ppr": "Half-PPR &mdash; generic, not a league's real rules",
-    "standard": "Standard &mdash; generic, not a league's real rules",
+    # Verified line-by-line against the supplied rulebook 2026-09-06: all 11 scored stats
+    # match, so this tab is that league's real rules rather than a stand-in for them.
+    "ppr": "Other league rules &mdash; full PPR, 4-pt passing TDs",
+    "half_ppr": "Half-PPR &mdash; generic, not a league you are in",
+    "standard": "Standard &mdash; generic, not a league you are in",
 }
 
 FIELDS = [
