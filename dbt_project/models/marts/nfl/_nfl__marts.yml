@@ -121,6 +121,24 @@ models:
           `ecr_position_rank - board_production_rank`. Positive = produced better than
           he is being drafted. **Filter on `is_draftable` first** — beyond the drafted
           pool the board stops ranking carefully and the number is noise.
+      - name: replacement_ppg
+        data_type: numeric(28,6)
+        description: >
+          Per-game points of the best player at this position who nobody has to start,
+          given the league's 12 teams and 1QB/2RB/2WR/1TE/1FLEX lineup. The waiver-wire
+          alternative.
+      - name: points_over_replacement
+        data_type: numeric(28,6)
+        description: >
+          `fantasy_points_per_game - replacement_ppg`. The only figure here that is
+          comparable **across** positions — raw points are not, which is why sorting by
+          them under 6-pt passing TDs returns fifteen quarterbacks.
+      - name: vor_draft_rank
+        data_type: integer
+        description: >
+          League-aware draft order, by points over replacement. Unlike consensus rank,
+          this **reorders when the scoring rules change** — the reason for pricing a
+          league's rules at all. Null below `min_games_for_rank`.
       - name: is_on_draft_board
         data_type: boolean
         description: False for players with production but no 2026 board entry.

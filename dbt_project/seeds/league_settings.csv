@@ -1,0 +1,5 @@
+scoring_format,league_name,teams,start_qb,start_rb,start_wr,start_te,start_flex
+kiddy,The Kiddy Game,12,1,2,2,1,1
+ppr,Not Your Average Church League,12,1,2,2,1,1
+half_ppr,generic 12-team half-PPR,12,1,2,2,1,1
+standard,generic 12-team standard,12,1,2,2,1,1

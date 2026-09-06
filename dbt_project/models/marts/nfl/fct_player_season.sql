@@ -79,6 +79,121 @@ production_ranked as (
 
 ),
 
+-- Replacement level: what you would get from the waiver wire at each position, which
+-- is the only thing that makes points comparable ACROSS positions. Raw per-game points
+-- are not a draft ranking -- under 6-pt passing TDs the top 15 by points is fifteen
+-- quarterbacks, because every startable QB scores a lot. Subtracting replacement is what
+-- turns league scoring into a league-specific ordering instead of a column.
+settings as (
+
+    select * from {{ ref('league_settings') }}
+
+),
+
+-- Base starters: the players every team must field at a dedicated slot.
+qualified as (
+
+    select
+        p.*,
+        s.teams,
+        s.start_qb,
+        s.start_rb,
+        s.start_wr,
+        s.start_te,
+        s.start_flex,
+        row_number() over (
+            partition by p.season, p.scoring_format, p.player_position
+            order by p.fantasy_points_per_game desc
+        ) as pos_rank
+    from production_ranked as p
+    inner join settings as s on p.scoring_format = s.scoring_format
+    where p.games_played >= {{ var('min_games_for_rank') }}
+
+),
+
+base_starters as (
+
+    select
+        *,
+        case player_position
+            when 'QB' then teams * start_qb
+            when 'RB' then teams * start_rb
+            when 'WR' then teams * start_wr
+            when 'TE' then teams * start_te
+        end as dedicated_slots
+    from qualified
+
+),
+
+-- FLEX is filled by the best remaining RB/WR/TE, so it deepens whichever positions are
+-- actually productive rather than a fixed split.
+flex_pool as (
+
+    select
+        *,
+        row_number() over (
+            partition by season, scoring_format
+            order by fantasy_points_per_game desc
+        ) as flex_rank
+    from base_starters
+    where
+        pos_rank > dedicated_slots
+        and player_position in ('RB', 'WR', 'TE')
+
+),
+
+started as (
+
+    select
+        season,
+        scoring_format,
+        player_position,
+        fantasy_points_per_game
+    from base_starters
+    where pos_rank <= dedicated_slots
+    union all
+    select
+        season,
+        scoring_format,
+        player_position,
+        fantasy_points_per_game
+    from flex_pool
+    where flex_rank <= teams * start_flex
+
+),
+
+-- Replacement = the best player at that position who is NOT started anywhere.
+replacement as (
+
+    select
+        season,
+        scoring_format,
+        player_position,
+        max(fantasy_points_per_game) as replacement_ppg
+    from (
+        select
+            b.season,
+            b.scoring_format,
+            b.player_position,
+            b.fantasy_points_per_game,
+            row_number() over (
+                partition by b.season, b.scoring_format, b.player_position
+                order by b.fantasy_points_per_game desc
+            ) as rn,
+            (
+                select count(*) from started as st
+                where
+                    st.season = b.season
+                    and st.scoring_format = b.scoring_format
+                    and st.player_position = b.player_position
+            ) as started_at_pos
+        from base_starters as b
+    ) as x
+    where rn = started_at_pos + 1
+    group by season, scoring_format, player_position
+
+),
+
 board_ranked as (
 
     select
@@ -124,6 +239,7 @@ joined as (
         b.ecr_stddev,
         b.bye_week,
         b.ecr_position_rank,
+        r.replacement_ppg,
         b.ecr is not null as is_on_draft_board,
         coalesce(b.ecr, 9999) <= {{ var('draftable_ecr_cutoff') }} as is_draftable
 
@@ -132,6 +248,11 @@ joined as (
         on
             p.player_join_key = b.player_join_key
             and p.player_position = b.player_position
+    left join replacement as r
+        on
+            p.season = r.season
+            and p.scoring_format = r.scoring_format
+            and p.player_position = r.player_position
 
 ),
 
@@ -166,8 +287,29 @@ valued as (
     select
         *,
         -- Positive = producing better than the market is charging.
-        ecr_position_rank - board_production_rank as value_over_ecr
+        ecr_position_rank - board_production_rank as value_over_ecr,
+        fantasy_points_per_game - replacement_ppg as points_over_replacement
     from comparable
+
+),
+
+-- The league-aware draft order. Unlike `overall` (consensus rank, identical in every
+-- scoring format), this reorders when the rules change -- which is the entire point of
+-- pricing a league's scoring rather than printing someone else's ranking.
+draft_ordered as (
+
+    select
+        *,
+        case
+            when points_over_replacement is not null
+                then row_number() over (
+                    partition by season, scoring_format
+                    order by
+                        case when points_over_replacement is null then 1 else 0 end,
+                        points_over_replacement desc
+                )
+        end as vor_draft_rank
+    from valued
 
 )
 
@@ -198,6 +340,9 @@ select
     cast(bye_week as integer) as bye_week,
     cast(ecr_position_rank as integer) as ecr_position_rank,
     cast(value_over_ecr as integer) as value_over_ecr,
+    cast(replacement_ppg as {{ dbt.type_numeric() }}) as replacement_ppg,
+    cast(points_over_replacement as {{ dbt.type_numeric() }}) as points_over_replacement,
+    cast(vor_draft_rank as integer) as vor_draft_rank,
     is_on_draft_board,
     is_draftable
-from valued
+from draft_ordered

@@ -47,7 +47,7 @@ select b.overall, b.player_name, b.player_position, b.team, b.ecr, b.ecr_stddev,
        f.scoring_format,
        f.games_played, f.fantasy_points_per_game, f.fantasy_points_floor,
        f.fantasy_points_ceiling, f.fantasy_points_stddev,
-       f.value_over_ecr, h.career_ppg
+       f.value_over_ecr, f.points_over_replacement, f.vor_draft_rank, h.career_ppg
 from board b
 left join prod f
     on b.player_join_key = f.player_join_key
@@ -92,6 +92,8 @@ FIELDS = [
     "ceil",
     "sd",
     "value",
+    "vor",
+    "vrank",
     "career_ppg",
 ]
 
@@ -140,6 +142,8 @@ def fetch(db: str) -> list[dict[str, Any]]:
             "ceil": _round(rec["ceil"]),
             "sd": _round(rec["sd"]),
             "value": rec["value"],
+            "vor": _round(rec["vor"]),
+            "vrank": rec["vrank"],
             "career_ppg": _round(rec["career_ppg"]),
         }
     return sorted(players.values(), key=lambda d: d["overall"])
@@ -266,9 +270,9 @@ JS = """
 const COLS=[{k:'pick',t:'',cls:'pick'},{k:'overall',t:'#'},{k:'player',t:'Player',cls:'l'},
  {k:'pos',t:'Pos',cls:'l'},{k:'bye',t:'Bye'},{k:'ecr',t:'ECR'},{k:'ppg',t:'2025 PPG'},
  {k:'range',t:'Floor-Ceiling'},{k:'sd',t:'Swing'},{k:'gp',t:'GP'},
- {k:'career_ppg',t:'Career PPG'},{k:'value',t:'Value'}];
+ {k:'career_ppg',t:'Career PPG'},{k:'vor',t:'VOR'},{k:'value',t:'Value'}];
 const KEY='draftboard.v1.drafted';
-let sortKey='overall',sortDir=1,posFilter='ALL',q='',hideDrafted=false;
+let sortKey='vrank',sortDir=1,posFilter='ALL',q='',hideDrafted=false;
 let fmt=FORMATS[0];
 // Scored figures live per format; identity/ECR/bye are shared. Switching scoring is a
 // re-read, not a rebuild -- the mart already carries every format.
@@ -292,7 +296,7 @@ function view(){
   if(q){const s=q.toLowerCase();
     r=r.filter(d=>d.player.toLowerCase().includes(s)||(d.team||'').toLowerCase().includes(s));}
   const k=sortKey==='range'?'ppg':(sortKey==='pick'?'overall':sortKey);
-  const perFmt=['ppg','floor','ceil','sd','gp','value','career_ppg'].includes(k);
+  const perFmt=['ppg','floor','ceil','sd','gp','value','career_ppg','vor','vrank'].includes(k);
   const get=o=>perFmt?F(o,k):o[k];
   return r.slice().sort((a,b)=>{let x=get(a),y=get(b);
     if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1;
@@ -336,7 +340,9 @@ function render(){
       '<td><strong>'+num(F(d,'ppg'),1)+'</strong></td>'+
       '<td class="rangecell">'+rangeCell(d)+'</td>'+
       '<td class="dim">'+num(F(d,'sd'),1)+'</td><td class="dim">'+num(F(d,'gp'))+'</td>'+
-      '<td class="dim">'+num(F(d,'career_ppg'),1)+'</td><td>'+valCell(F(d,'value'))+'</td></tr>';
+      '<td class="dim">'+num(F(d,'career_ppg'),1)+'</td>'+
+      '<td><strong>'+num(F(d,'vor'),1)+'</strong></td>'+
+      '<td>'+valCell(F(d,'value'))+'</td></tr>';
   }).join('');
   document.querySelectorAll('th button').forEach(b=>
     b.dataset.active=(b.dataset.k===sortKey)?'1':'0');
@@ -411,7 +417,9 @@ PAGE = """<title>2026 Draft Board - Value vs. Consensus</title>
 <header class="masthead">
   <div class="kicker"><span id="fmt-label">__SCORING__</span> &middot; production 2022&ndash;2025 &middot; board scraped __SCRAPED__</div>
   <h1>The Draft Board</h1>
-  <p class="dek">The __N__ players inside the drafted pool, ordered by expert consensus rank.
+  <p class="dek">The __N__ players inside the drafted pool, ordered by <b>value over
+  replacement</b> in your league's rules &mdash; not by consensus. Sort by <b>#</b> for
+  consensus order.
   <b>Click any row to cross a player off</b> as he is taken &mdash; it sticks through a page
   refresh. <b>Value</b> is where a player&rsquo;s 2025 production ranked at his position minus
   where he&rsquo;s being drafted; positive means he produced better than his cost.</p>
