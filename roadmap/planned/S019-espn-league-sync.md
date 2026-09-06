@@ -11,6 +11,51 @@ As someone in two ESPN leagues, I want the platform to know my league's rules, m
 and who has already been taken, so that its output is about my team rather than about
 fantasy football in general.
 
+## What the "views" are
+ESPN's fantasy API is one URL per league:
+
+```
+https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/2026/segments/0/leagues/{LEAGUE_ID}
+```
+
+You do not ask for different *endpoints* — you ask the same URL for different **views**,
+via `?view=`. The view decides which slice of the league comes back. Demonstrated on the
+public season endpoint: no view returns `abbrev, active, currentScoringPeriod, gameId…`;
+`?view=proTeamSchedules_wl` on the identical URL returns `display, settings`. Same address,
+different payload.
+
+The views this story needs, in plain terms:
+
+| View | Plain English |
+|---|---|
+| `mSettings` | **The league's rulebook.** How many points a receiving yard is worth, how many teams, which roster slots start, PPR or not. |
+| `mDraftDetail` | **The draft log.** Every pick: which team took which player at which slot. |
+| `mRoster` | **Who currently owns whom**, week by week — including James's own team. |
+| `mTeam` | Team names, records, owners. Mostly needed to label the above. |
+
+## Staging: build against a throwaway league first
+James's call, and it is the right one. **Do not point the first version at a real league.**
+
+A disposable target removes three risks at once: no credentials to handle while the ingest
+is still wrong, no other people's names in play, and a draft you can re-run on demand
+instead of once a year.
+
+Two ways to get one, and they are not equally reliable:
+
+- **A throwaway ESPN league — recommended, and verified to work.** Creating a league is
+  free and gives a **real league id on the identical REST API**. Set it public and there is
+  no auth at all; run a solo autodraft and `mDraftDetail` fills with real pick data. Fully
+  controllable, repeatable, no one else's data.
+- **ESPN's mock draft lobby — attractive but unconfirmed.** The lobby page loads (HTTP 200)
+  but is a JavaScript app; probing it surfaced no REST endpoints, and the v3 API has no
+  "mock" segment (`segments/1` → 404). Live mock drafts are most likely driven over
+  websockets by the draft client rather than the REST API this story uses. **Treat mock
+  lobbies as unproven** — if they turn out to be reachable, good, but do not make the story
+  depend on it.
+
+So: throwaway league → verify every view and the whole dbt path → only then point at the
+real leagues, and only then deal with cookies if they are private.
+
 ## The highest-value piece is not the draft sync
 Ranked by value per unit of effort, and this order is deliberate:
 
@@ -57,6 +102,9 @@ a real league id.
 ## Acceptance Criteria
 
 ### Implementation
+- [ ] **Stage 1 — throwaway league.** Every view proven end-to-end against a disposable
+      public league before any real league id is configured, and before any credential
+      handling exists
 - [ ] `src/nfl/ingest/espn_league.py` — one module, views as sub-commands
       (`--view settings|draft|roster`), league id + season from config
 - [ ] `NFL_ESPN_LEAGUE_IDS` in `config.py`; cookies from env only, never arguments
