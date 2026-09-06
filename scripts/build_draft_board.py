@@ -36,14 +36,15 @@ with board as (
     where player_position in ('QB', 'RB', 'WR', 'TE') and ecr <= ?
 ),
 prod as (
-    select * from dev.fct_player_season where season = ? and scoring_format = ?
+    select * from dev.fct_player_season where season = ?
 ),
 hist as (
-    select player_join_key, avg(fantasy_points_per_game) as career_ppg
-    from dev.fct_player_season where scoring_format = ? group by 1
+    select player_join_key, scoring_format, avg(fantasy_points_per_game) as career_ppg
+    from dev.fct_player_season group by 1, 2
 )
 select b.overall, b.player_name, b.player_position, b.team, b.ecr, b.ecr_stddev,
        b.bye_week, b.scrape_date,
+       f.scoring_format,
        f.games_played, f.fantasy_points_per_game, f.fantasy_points_floor,
        f.fantasy_points_ceiling, f.fantasy_points_stddev,
        f.value_over_ecr, h.career_ppg
@@ -51,15 +52,26 @@ from board b
 left join prod f
     on b.player_join_key = f.player_join_key
     and b.player_position = f.player_position
-left join hist h on b.player_join_key = h.player_join_key
+left join hist h
+    on b.player_join_key = h.player_join_key
+    and f.scoring_format = h.scoring_format
 order by b.ecr
 """
 
+# Formats offered in the page switch, in the order they appear. Kiddy first: it is the
+# league whose rules we actually know. The other league's rules are still assumed, which
+# is precisely the mistake that made every earlier board PPR by default.
+FORMATS = ["kiddy", "ppr", "half_ppr", "standard"]
+
+# Short labels for the switch; long ones for the header, which should say plainly which
+# rulebook the numbers on screen are using.
+FORMAT_BUTTON = {"kiddy": "Kiddy", "ppr": "PPR", "half_ppr": "Half", "standard": "Std"}
+
 SCORING_LABEL = {
-    "ppr": "PPR",
-    "half_ppr": "Half-PPR",
-    "standard": "Standard",
     "kiddy": "Kiddy league rules &mdash; standard scoring, 6-pt passing TDs",
+    "ppr": "PPR &mdash; generic, not a league's real rules",
+    "half_ppr": "Half-PPR &mdash; generic, not a league's real rules",
+    "standard": "Standard &mdash; generic, not a league's real rules",
 }
 
 FIELDS = [
@@ -71,6 +83,7 @@ FIELDS = [
     "ecr_sd",
     "bye",
     "scraped",
+    "scoring_format",
     "gp",
     "ppg",
     "floor",
@@ -89,17 +102,45 @@ def _round(x: Any, places: int = 1) -> Any:
     return x
 
 
-def fetch(db: str, scoring: str) -> list[dict[str, Any]]:
+def fetch(db: str) -> list[dict[str, Any]]:
+    """One record per player, carrying a `f` map of scoring_format -> that format's numbers.
+
+    Identity, ECR and bye are format-independent and stored once; only the scored figures
+    vary, so the page can switch formats without a rebuild.
+    """
     con = duckdb.connect(db, read_only=True)
-    rows = con.execute(QUERY, [ECR_CUTOFF, SEASON, scoring, scoring]).fetchall()
-    out: list[dict[str, Any]] = []
+    rows = con.execute(QUERY, [ECR_CUTOFF, SEASON]).fetchall()
+    players: dict[str, dict[str, Any]] = {}
     for row in rows:
         rec = dict(zip(FIELDS, row, strict=True))
-        for key in ("ecr", "ecr_sd", "ppg", "floor", "ceil", "sd", "career_ppg"):
-            rec[key] = _round(rec[key])
-        rec["scraped"] = str(rec["scraped"])
-        out.append(rec)
-    return out
+        fmt = rec.pop("scoring_format")
+        key = f"{rec['player']}|{rec['pos']}"
+        base = players.setdefault(
+            key,
+            {
+                "overall": rec["overall"],
+                "player": rec["player"],
+                "pos": rec["pos"],
+                "team": rec["team"],
+                "ecr": _round(rec["ecr"]),
+                "ecr_sd": _round(rec["ecr_sd"]),
+                "bye": rec["bye"],
+                "scraped": str(rec["scraped"]),
+                "f": {},
+            },
+        )
+        if fmt is None:
+            continue
+        base["f"][fmt] = {
+            "gp": rec["gp"],
+            "ppg": _round(rec["ppg"]),
+            "floor": _round(rec["floor"]),
+            "ceil": _round(rec["ceil"]),
+            "sd": _round(rec["sd"]),
+            "value": rec["value"],
+            "career_ppg": _round(rec["career_ppg"]),
+        }
+    return sorted(players.values(), key=lambda d: d["overall"])
 
 
 CSS = """
@@ -226,6 +267,10 @@ const COLS=[{k:'pick',t:'',cls:'pick'},{k:'overall',t:'#'},{k:'player',t:'Player
  {k:'career_ppg',t:'Career PPG'},{k:'value',t:'Value'}];
 const KEY='draftboard.v1.drafted';
 let sortKey='overall',sortDir=1,posFilter='ALL',q='',hideDrafted=false;
+let fmt=FORMATS[0];
+// Scored figures live per format; identity/ECR/bye are shared. Switching scoring is a
+// re-read, not a rebuild -- the mart already carries every format.
+const F=(d,k)=>{const b=d.f&&d.f[fmt];return b?b[k]:null;};
 
 // Persisted so a refresh mid-draft does not wipe the board. Storage can throw in a
 // sandboxed frame, so every access is guarded and the page still works without it.
@@ -234,8 +279,10 @@ try{const raw=localStorage.getItem(KEY); if(raw) drafted=new Set(JSON.parse(raw)
 function save(){try{localStorage.setItem(KEY,JSON.stringify([...drafted]));}catch(e){}}
 const idOf=d=>d.player+'|'+d.pos;
 
-const maxCeil={};
-DATA.forEach(d=>{if(d.ceil!=null)maxCeil[d.pos]=Math.max(maxCeil[d.pos]||0,d.ceil)});
+let maxCeil={};
+function scaleCeilings(){maxCeil={};
+  DATA.forEach(d=>{const c=F(d,'ceil'); if(c!=null)maxCeil[d.pos]=Math.max(maxCeil[d.pos]||0,c);});}
+function refit(){scaleCeilings();}
 
 function view(){
   let r=DATA.filter(d=>(posFilter==='ALL'||d.pos===posFilter));
@@ -243,7 +290,9 @@ function view(){
   if(q){const s=q.toLowerCase();
     r=r.filter(d=>d.player.toLowerCase().includes(s)||(d.team||'').toLowerCase().includes(s));}
   const k=sortKey==='range'?'ppg':(sortKey==='pick'?'overall':sortKey);
-  return r.slice().sort((a,b)=>{let x=a[k],y=b[k];
+  const perFmt=['ppg','floor','ceil','sd','gp','value','career_ppg'].includes(k);
+  const get=o=>perFmt?F(o,k):o[k];
+  return r.slice().sort((a,b)=>{let x=get(a),y=get(b);
     if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1;
     if(typeof x==='string')return x.localeCompare(y)*sortDir;
     return (x-y)*sortDir;});
@@ -252,10 +301,10 @@ function num(v,d){return v==null?'<span class="na">-</span>':(d?v.toFixed(1):v)}
 function valCell(v){if(v==null)return '<span class="na">-</span>';
   const c=v>0?'p':(v<0?'n':'z'); return '<span class="val '+c+'">'+(v>0?'+':'')+v+'</span>';}
 function rangeCell(d){
-  if(d.ppg==null)return '<span class="na">no 2025 data</span>';
+  const ppg=F(d,'ppg'); if(ppg==null)return '<span class="na">no 2025 data</span>';
   const m=maxCeil[d.pos]||1;
-  const f=Math.max(0,(d.floor??0)/m*100),c=Math.min(100,(d.ceil??0)/m*100),
-        p=Math.min(100,d.ppg/m*100);
+  const f=Math.max(0,(F(d,'floor')??0)/m*100),c=Math.min(100,(F(d,'ceil')??0)/m*100),
+        p=Math.min(100,ppg/m*100);
   return '<div class="range '+d.pos+'"><div class="track"></div><div class="span" style="left:'
     +f+'%;width:'+Math.max(1,c-f)+'%"></div><div class="dot" style="left:'+p+'%"></div></div>';
 }
@@ -282,10 +331,10 @@ function render(){
       '<td class="l"><span class="nm">'+d.player+'</span><span class="tm">'+(d.team||'FA')+'</span></td>'+
       '<td class="l"><span class="pos '+d.pos+'">'+d.pos+'</span></td>'+
       '<td class="dim">'+num(d.bye)+'</td><td class="dim">'+num(d.ecr,1)+'</td>'+
-      '<td><strong>'+num(d.ppg,1)+'</strong></td>'+
+      '<td><strong>'+num(F(d,'ppg'),1)+'</strong></td>'+
       '<td class="rangecell">'+rangeCell(d)+'</td>'+
-      '<td class="dim">'+num(d.sd,1)+'</td><td class="dim">'+num(d.gp)+'</td>'+
-      '<td class="dim">'+num(d.career_ppg,1)+'</td><td>'+valCell(d.value)+'</td></tr>';
+      '<td class="dim">'+num(F(d,'sd'),1)+'</td><td class="dim">'+num(F(d,'gp'))+'</td>'+
+      '<td class="dim">'+num(F(d,'career_ppg'),1)+'</td><td>'+valCell(F(d,'value'))+'</td></tr>';
   }).join('');
   document.querySelectorAll('th button').forEach(b=>
     b.dataset.active=(b.dataset.k===sortKey)?'1':'0');
@@ -344,6 +393,13 @@ rb.onclick=()=>{
   armed=setTimeout(disarm,4000);
 };
 document.getElementById('q').oninput=e=>{q=e.target.value;render()};
+// scoring switch
+document.querySelectorAll('.fmt button').forEach(b=>b.onclick=()=>{
+  fmt=b.dataset.f;
+  document.querySelectorAll('.fmt button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  document.getElementById('fmt-label').innerHTML=LABELS[fmt];
+  refit(); render();});
+refit();
 render();
 """
 
@@ -351,7 +407,7 @@ PAGE = """<title>2026 Draft Board - Value vs. Consensus</title>
 <style>__CSS__</style>
 <div class="wrap">
 <header class="masthead">
-  <div class="kicker">__SCORING__ &middot; production 2022&ndash;2025 &middot; board scraped __SCRAPED__</div>
+  <div class="kicker"><span id="fmt-label">__SCORING__</span> &middot; production 2022&ndash;2025 &middot; board scraped __SCRAPED__</div>
   <h1>The Draft Board</h1>
   <p class="dek">The __N__ players inside the drafted pool, ordered by expert consensus rank.
   <b>Click any row to cross a player off</b> as he is taken &mdash; it sticks through a page
@@ -373,6 +429,7 @@ PAGE = """<title>2026 Draft Board - Value vs. Consensus</title>
     <button data-p="WR" aria-pressed="false">WR</button>
     <button data-p="TE" aria-pressed="false">TE</button>
   </div>
+  <div class="fmt seg" role="group" aria-label="Scoring format">__FMTBTNS__</div>
   <button class="act" id="hide" aria-pressed="false">Hide drafted</button>
   <button class="act danger" id="reset">Reset board</button>
   <input id="q" type="search" placeholder="Search player or team&hellip;" aria-label="Search players">
@@ -406,18 +463,31 @@ PAGE = """<title>2026 Draft Board - Value vs. Consensus</title>
   Cross-offs are stored in this browser only.
 </footer>
 </div>
-<script>const DATA=__DATA__;__JS__</script>
+<script>const DATA=__DATA__;const FORMATS=__FORMATS__;const LABELS=__LABELS__;__JS__</script>
 """
 
 
 def build(data: list[dict[str, Any]], scoring: str) -> str:
-    no_data = sum(1 for d in data if d["ppg"] is None)
-    positive = sum(1 for d in data if d["value"] is not None and d["value"] > 0)
+    no_data = sum(1 for d in data if not d["f"].get(scoring, {}).get("ppg"))
+    positive = sum(
+        1
+        for d in data
+        if (d["f"].get(scoring) or {}).get("value") is not None and d["f"][scoring]["value"] > 0
+    )
     scraped = data[0]["scraped"] if data else "unknown"
+    order = [scoring] + [f for f in FORMATS if f != scoring]
+    buttons = "".join(
+        f'<button data-f="{f}" aria-pressed="{"true" if f == scoring else "false"}">'
+        f"{FORMAT_BUTTON.get(f, f)}</button>"
+        for f in order
+    )
     return (
         PAGE.replace("__CSS__", CSS)
         .replace("__JS__", JS)
         .replace("__DATA__", json.dumps(data, separators=(",", ":")))
+        .replace("__FORMATS__", json.dumps(order))
+        .replace("__LABELS__", json.dumps({f: SCORING_LABEL.get(f, f) for f in order}))
+        .replace("__FMTBTNS__", buttons)
         .replace("__SCRAPED__", str(scraped))
         .replace("__N__", str(len(data)))
         .replace("__NPOS__", str(positive))
@@ -439,7 +509,7 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    data = fetch(args.db, args.scoring)
+    data = fetch(args.db)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(build(data, args.scoring))
     print(f"{len(data)} players ({args.scoring}) -> {args.out} ({args.out.stat().st_size:,} bytes)")
