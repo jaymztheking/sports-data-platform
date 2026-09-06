@@ -96,6 +96,11 @@ skip it; CI (Linux) is not expected to hit it.
 
 ## Notes / decisions
 
+- **Draft board artifact** — published page over `fct_player_season`. ECR refreshed
+  2026-09-06 (board scraped 2026-09-04) for the second league draft. Sticky-header bug
+  fixed the same day (`S005B`). Its **generator is not in the repo** — regenerated from a
+  query each time. Put it under version control before the next refresh.
+
 - Cost rule: always-free or self-hosted only (no trials/tiers, no MotherDuck).
 - Engines: two environments — `dev` = DuckDB, `prod` = Postgres on simplified k3s (two dbt adapters). CI is the dev→prod gate (runs `dev` on `:memory:`), not a third env.
 - Collaboration: **rule 3 suspended 2026-08-28 → 2026-09-06** (draft). Claude writes core SQL/Python in full until then; restore after. PR-per-story + TDD unaffected (see `CLAUDE.md`).
