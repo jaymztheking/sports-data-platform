@@ -47,6 +47,14 @@ models:
                 values: ['QB', 'RB', 'WR', 'TE']
       - name: team
         data_type: varchar
+      - name: player_join_key
+        data_type: varchar
+        description: >
+          Normalised name key shared with `int_draft_board` / `stg_nfl__ff_rankings`.
+          The only bridge between gsis ids and ffverse ids. Exposed so the draft pool can
+          be assembled board-first (left join from the board) to include rookies, who by
+          construction have no row in this production-built mart.
+        data_tests: [not_null]
       - name: games_played
         data_type: integer
         description: REG-season games with a stat line.
