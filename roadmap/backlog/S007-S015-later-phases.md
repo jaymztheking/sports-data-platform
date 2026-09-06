@@ -69,3 +69,33 @@ Deferred to a later story: **weekly projections**, built as
 `season baseline × weekly modifier` (opponent, spread, game script, injury). The
 dependency runs season → weekly deliberately, so that Week 1 matchups cannot leak into a
 draft ranking.
+
+
+---
+
+## Dropped 2026-09-06 — ESPN league sync (was S019)
+
+Cut before it was written. The valuable half (league scoring and roster settings) was
+done **manually** — both rulebooks pasted in and encoded as the `kiddy` and `ppr` formats,
+plus `league_settings.csv` for lineup shape. Rules change once a year in July, so an API
+to fetch them earns very little. The other half, live auto cross-off, could not be vetted
+before the drafts, and `S005C`'s manual cross-off already covers it and cannot break.
+
+Keeping only what the probing established, so it does not have to be re-derived:
+
+- **ESPN's API is one URL per league with `?view=` selecting the slice** —
+  `.../seasons/2026/segments/0/leagues/{id}?view=mSettings|mDraftDetail|mRoster|mTeam`.
+- **Auth is unresolvable without a real league id.** The endpoint returns
+  **401 `AUTH_LEAGUE_NOT_VISIBLE`** for *private and nonexistent leagues alike*, so probing
+  cannot tell which case applies. Public leagues need no auth; private ones need `espn_s2`
+  and `SWID` cookies, which expire and are credentials.
+- **Mock draft lobbies are not REST-addressable.** The lobby page loads but is a JS app
+  exposing no endpoints, and there is no mock segment (`segments/1` → 404). Live drafts are
+  most likely websocket-driven by the draft client. A **throwaway ESPN league** is the
+  reliable disposable target instead — free, real league id, identical REST surface, and
+  public if you set it so.
+- **The open question, if this ever returns:** does `mDraftDetail` update *during* a live
+  draft, or only settle once it ends? Auto cross-off is impossible over REST if the latter,
+  and it cannot be tested during a real draft.
+- **Privacy:** rosters and draft picks carry other managers' names. They belong in no
+  committed sample and no published artifact.
