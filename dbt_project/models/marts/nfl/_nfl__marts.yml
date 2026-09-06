@@ -34,7 +34,7 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['standard', 'half_ppr', 'ppr']
+                values: ['standard', 'half_ppr', 'ppr', 'kiddy']
       - name: player_display_name
         data_type: varchar
         data_tests: [not_null]

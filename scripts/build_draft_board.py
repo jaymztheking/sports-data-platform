@@ -26,7 +26,7 @@ import duckdb
 DEFAULT_DB = "nfl_dev.duckdb"
 DEFAULT_OUT = Path("build/draft_board.html")
 SEASON = 2025
-SCORING = "ppr"
+DEFAULT_SCORING = "kiddy"
 ECR_CUTOFF = 200
 
 QUERY = """
@@ -55,6 +55,13 @@ left join hist h on b.player_join_key = h.player_join_key
 order by b.ecr
 """
 
+SCORING_LABEL = {
+    "ppr": "PPR",
+    "half_ppr": "Half-PPR",
+    "standard": "Standard",
+    "kiddy": "Kiddy league rules &mdash; standard scoring, 6-pt passing TDs",
+}
+
 FIELDS = [
     "overall",
     "player",
@@ -82,9 +89,9 @@ def _round(x: Any, places: int = 1) -> Any:
     return x
 
 
-def fetch(db: str) -> list[dict[str, Any]]:
+def fetch(db: str, scoring: str) -> list[dict[str, Any]]:
     con = duckdb.connect(db, read_only=True)
-    rows = con.execute(QUERY, [ECR_CUTOFF, SEASON, SCORING, SCORING]).fetchall()
+    rows = con.execute(QUERY, [ECR_CUTOFF, SEASON, scoring, scoring]).fetchall()
     out: list[dict[str, Any]] = []
     for row in rows:
         rec = dict(zip(FIELDS, row, strict=True))
@@ -319,7 +326,7 @@ PAGE = """<title>2026 Draft Board - Value vs. Consensus</title>
 <style>__CSS__</style>
 <div class="wrap">
 <header class="masthead">
-  <div class="kicker">PPR &middot; production 2022&ndash;2025 &middot; consensus board scraped __SCRAPED__</div>
+  <div class="kicker">__SCORING__ &middot; production 2022&ndash;2025 &middot; board scraped __SCRAPED__</div>
   <h1>The Draft Board</h1>
   <p class="dek">The __N__ players inside the drafted pool, ordered by expert consensus rank.
   <b>Click any row to cross a player off</b> as he is taken &mdash; it sticks through a page
@@ -378,7 +385,7 @@ PAGE = """<title>2026 Draft Board - Value vs. Consensus</title>
 """
 
 
-def build(data: list[dict[str, Any]]) -> str:
+def build(data: list[dict[str, Any]], scoring: str) -> str:
     no_data = sum(1 for d in data if d["ppg"] is None)
     positive = sum(1 for d in data if d["value"] is not None and d["value"] > 0)
     scraped = data[0]["scraped"] if data else "unknown"
@@ -390,6 +397,7 @@ def build(data: list[dict[str, Any]]) -> str:
         .replace("__N__", str(len(data)))
         .replace("__NPOS__", str(positive))
         .replace("__ND__", str(no_data))
+        .replace("__SCORING__", SCORING_LABEL.get(scoring, scoring))
     )
 
 
@@ -399,12 +407,17 @@ def main() -> int:
     ap.add_argument(
         "--out", type=Path, default=DEFAULT_OUT, help=f"output (default: {DEFAULT_OUT})"
     )
+    ap.add_argument(
+        "--scoring",
+        default=DEFAULT_SCORING,
+        help=f"scoring_format in the mart (default: {DEFAULT_SCORING})",
+    )
     args = ap.parse_args()
 
-    data = fetch(args.db)
+    data = fetch(args.db, args.scoring)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(build(data))
-    print(f"{len(data)} players -> {args.out} ({args.out.stat().st_size:,} bytes)")
+    args.out.write_text(build(data, args.scoring))
+    print(f"{len(data)} players ({args.scoring}) -> {args.out} ({args.out.stat().st_size:,} bytes)")
     return 0
 
 

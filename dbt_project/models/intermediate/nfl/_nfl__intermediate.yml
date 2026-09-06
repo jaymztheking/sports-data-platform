@@ -17,7 +17,7 @@ models:
         data_tests:
           - accepted_values:
               arguments:
-                values: ['standard', 'half_ppr', 'ppr']
+                values: ['standard', 'half_ppr', 'ppr', 'kiddy']
       - name: player_position
         data_tests:
           - accepted_values:
