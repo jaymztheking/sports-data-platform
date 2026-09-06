@@ -29,8 +29,8 @@ which already matched.
 
 Movement is exactly the shape dropping PPR should produce, which is the sanity check:
 
-- **Up** — deep threats and TEs: Tory Horton +12, DJ Moore +11, Terrance Ferguson +11,
-  Alec Pierce +7, Darren Waller +7
+- **Up** — deep threats and TEs: DJ Moore +12, Terrance Ferguson +11,
+  Jacory Croskey-Merritt +9, Josh Oliver +8, Darren Waller +7
 - **Down** — possession receivers and pass-catching backs: Wan'Dale Robinson −12,
   Tyjae Spears −12, Keenan Allen −11, Kenny Gainwell −10, Alvin Kamara −8
 
@@ -55,10 +55,17 @@ from 2025 play-by-play before deciding:
 Second-order against rank gaps of several points per game, so it is deferred rather than
 rushed. Implementable from `data/raw/pbp.parquet` when wanted — the ingest exists.
 
-**Also unconfirmed:** whether return TDs (`KRTD`/`PRTD`, 6 pts) credit the individual
-returner or only the D/ST. They are listed under *Team Defense / Special Teams* in the
-rules, but the seed currently pays the player 6. Affects very few players; worth checking
-in ESPN before it matters.
+**Return TDs go to the D/ST, not the returner** — confirmed by James 2026-09-06, so
+`kiddy,special_teams_tds` is **0**. Worth noting the trap: `special_teams_tds` was added to
+the seed in S005A precisely to reconcile with nflverse's own PPR column, which *does* credit
+the player. Correct there, wrong here — a scoring rule can be right for one definition and
+wrong for another, and only the league's own rules settle it. The reconciliation test is
+scoped to `scoring_format = 'ppr'`, so it still passes.
+
+Affected 14 skill players in 2025, each losing 0.6–1.2 ppg. Small overall but not
+cosmetic: **Tory Horton was the single biggest riser** under the earlier assumption (+12)
+and drops off the risers list entirely once the points are removed. DJ Moore (+12) is now
+the largest mover.
 
 ## Out of scope
 Kicker and D/ST scoring is fully specified in the league rules but the mart covers
