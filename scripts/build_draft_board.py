@@ -155,7 +155,9 @@ input[type="search"]::placeholder{color:var(--text-faint)}
 .act{font:inherit;font-size:11px;letter-spacing:.06em;background:var(--surface);
   border:1px solid var(--rule);color:var(--text-dim);padding:6px 11px;cursor:pointer}
 .act[aria-pressed="true"]{background:var(--text);color:var(--bg);font-weight:600}
-.act.danger:hover{border-color:var(--neg);color:var(--neg)}
+.act.danger:hover:not(:disabled){border-color:var(--neg);color:var(--neg)}
+.act:disabled{opacity:.4;cursor:default}
+.act.armed{background:var(--neg);border-color:var(--neg);color:#fff;font-weight:600}
 .count{font-size:11px;color:var(--text-dim);margin-left:auto}
 .count b{color:var(--text)}
 /* The table owns its scroll region in both axes and the header pins to the top of it.
@@ -287,6 +289,7 @@ function render(){
   }).join('');
   document.querySelectorAll('th button').forEach(b=>
     b.dataset.active=(b.dataset.k===sortKey)?'1':'0');
+  resetState();
 }
 function toggle(id){
   if(drafted.has(id)) drafted.delete(id); else drafted.add(id);
@@ -314,10 +317,32 @@ document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{
   render();});
 const hb=document.getElementById('hide');
 hb.onclick=()=>{hideDrafted=!hideDrafted;hb.setAttribute('aria-pressed',hideDrafted);render();};
-document.getElementById('reset').onclick=()=>{
-  if(!drafted.size)return;
-  if(confirm('Clear all '+drafted.size+' drafted players? This starts a fresh board.')){
-    drafted.clear();save();render();}};
+// Two-step confirm rather than confirm(): the page runs in a sandboxed frame where
+// window.confirm is blocked and returns false without ever showing a dialog, so the
+// reset silently never fired. First click arms the button, second click inside 4s clears.
+const rb=document.getElementById('reset');
+let armed=null;
+function disarm(){
+  if(armed){clearTimeout(armed);armed=null;}
+  rb.textContent='Reset board';
+  rb.classList.remove('armed');
+  rb.setAttribute('aria-live','polite');
+}
+function resetState(){
+  const n=drafted.size;
+  rb.disabled=(n===0);
+  if(!armed) rb.textContent = n ? 'Reset board' : 'Nothing to reset';
+}
+rb.onclick=()=>{
+  if(!drafted.size) return;
+  if(armed){
+    disarm(); drafted.clear(); save(); render();
+    return;
+  }
+  rb.textContent='Tap again to clear '+drafted.size;
+  rb.classList.add('armed');
+  armed=setTimeout(disarm,4000);
+};
 document.getElementById('q').oninput=e=>{q=e.target.value;render()};
 render();
 """
