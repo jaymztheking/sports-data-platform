@@ -31,7 +31,9 @@ ECR_CUTOFF = 200
 
 QUERY = """
 with board as (
-    select *, row_number() over (order by ecr) as overall
+    -- Consensus is per scoring format now: the standard board's #1 is Jahmyr Gibbs and
+    -- the PPR board's is Ja'Marr Chase, so a league must be ranked against its own.
+    select *, row_number() over (partition by scoring_format order by ecr) as overall
     from dev.int_draft_board
     where player_position in ('QB', 'RB', 'WR', 'TE') and ecr <= ?
 ),
@@ -43,7 +45,7 @@ hist as (
     from dev.fct_player_season group by 1, 2
 )
 select b.overall, b.player_name, b.player_position, b.team, b.ecr, b.ecr_stddev,
-       b.bye_week, b.scrape_date,
+       b.bye_week, b.board_updated as scrape_date,
        f.scoring_format,
        f.games_played, f.fantasy_points_per_game, f.fantasy_points_floor,
        f.fantasy_points_ceiling, f.fantasy_points_stddev,
@@ -52,6 +54,7 @@ from board b
 left join prod f
     on b.player_join_key = f.player_join_key
     and b.player_position = f.player_position
+    and b.scoring_format = f.scoring_format
 left join hist h
     on b.player_join_key = h.player_join_key
     and f.scoring_format = h.scoring_format
@@ -122,20 +125,21 @@ def fetch(db: str) -> list[dict[str, Any]]:
         base = players.setdefault(
             key,
             {
-                "overall": rec["overall"],
                 "player": rec["player"],
                 "pos": rec["pos"],
                 "team": rec["team"],
-                "ecr": _round(rec["ecr"]),
-                "ecr_sd": _round(rec["ecr_sd"]),
-                "bye": rec["bye"],
                 "scraped": str(rec["scraped"]),
                 "f": {},
             },
         )
         if fmt is None:
             continue
+        # overall / ecr / bye are all per-format now: consensus rank is scoring-specific.
         base["f"][fmt] = {
+            "overall": rec["overall"],
+            "ecr": _round(rec["ecr"]),
+            "ecr_sd": _round(rec["ecr_sd"]),
+            "bye": rec["bye"],
             "gp": rec["gp"],
             "ppg": _round(rec["ppg"]),
             "floor": _round(rec["floor"]),
@@ -146,7 +150,11 @@ def fetch(db: str) -> list[dict[str, Any]]:
             "vrank": rec["vrank"],
             "career_ppg": _round(rec["career_ppg"]),
         }
-    return sorted(players.values(), key=lambda d: d["overall"])
+
+    return sorted(
+        players.values(),
+        key=lambda d: min((b["overall"] for b in d["f"].values()), default=9999),
+    )
 
 
 CSS = """
@@ -296,7 +304,8 @@ function view(){
   if(q){const s=q.toLowerCase();
     r=r.filter(d=>d.player.toLowerCase().includes(s)||(d.team||'').toLowerCase().includes(s));}
   const k=sortKey==='range'?'ppg':(sortKey==='pick'?'overall':sortKey);
-  const perFmt=['ppg','floor','ceil','sd','gp','value','career_ppg','vor','vrank'].includes(k);
+  const perFmt=['ppg','floor','ceil','sd','gp','value','career_ppg','vor','vrank',
+                'overall','ecr','ecr_sd','bye'].includes(k);
   const get=o=>perFmt?F(o,k):o[k];
   return r.slice().sort((a,b)=>{let x=get(a),y=get(b);
     if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1;
@@ -333,10 +342,10 @@ function render(){
       (on?' class="drafted"':'')+' aria-label="'+d.player+(on?', drafted':', available')+'">'+
       '<td class="pick"><button class="box" aria-pressed="'+on+'" tabindex="-1" '+
         'aria-label="Mark '+d.player+' drafted"></button></td>'+
-      '<td class="rank">'+d.overall+'</td>'+
+      '<td class="rank">'+(F(d,'overall')??'-')+'</td>'+
       '<td class="l"><span class="nm">'+d.player+'</span><span class="tm">'+(d.team||'FA')+'</span></td>'+
       '<td class="l"><span class="pos '+d.pos+'">'+d.pos+'</span></td>'+
-      '<td class="dim">'+num(d.bye)+'</td><td class="dim">'+num(d.ecr,1)+'</td>'+
+      '<td class="dim">'+num(F(d,'bye'))+'</td><td class="dim">'+num(F(d,'ecr'),1)+'</td>'+
       '<td><strong>'+num(F(d,'ppg'),1)+'</strong></td>'+
       '<td class="rangecell">'+rangeCell(d)+'</td>'+
       '<td class="dim">'+num(F(d,'sd'),1)+'</td><td class="dim">'+num(F(d,'gp'))+'</td>'+

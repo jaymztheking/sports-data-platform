@@ -1,20 +1,53 @@
--- The draft board, reduced to one row per player.
+-- The draft board, one row per player **per scoring format**.
 --
--- stg_nfl__ff_rankings is faithful to the feed and grains on ff_player_id, which means
--- player_join_key + position can repeat: the 2026 board carries two distinct WRs named
--- "Isaiah Williams" (ffverse 26379 @NYJ, 10977 @FA). Joining that to production without
--- deduping would fan the mart out and double-count a player.
+-- Format matters: consensus rank is not scoring-agnostic. The standard board has Jahmyr
+-- Gibbs at 1.41 and the PPR board has Ja'Marr Chase at 1.58 -- so ranking a
+-- standard-scoring league against PPR consensus is wrong at the very first pick. The
+-- previous source (ffverse) only mirrored the PPR page, which is why this moved to
+-- FantasyPros directly.
 --
--- The tie-break is deliberate and ordered: a rostered player outranks a free agent
--- (a FA is not the person you are drafting), then better ECR wins. Picking "lowest ecr"
--- alone would resolve Isaiah Williams the wrong way — the FA sits at 297.5, ahead of the
--- rostered player's 301.6.
+-- Dedupe: name+position can still collide (two distinct WRs named "Isaiah Williams"),
+-- so a rostered player outranks a free agent, then better ECR wins. Ordering matters --
+-- "lowest ecr" alone resolves that pair the wrong way.
 --
--- Grain: player_join_key x player_position.
+-- Grain: scoring_format x player_join_key x player_position.
 
 with board as (
 
-    select * from {{ ref('stg_nfl__ff_rankings') }}
+    select * from {{ ref('stg_nfl__fp_rankings') }}
+
+),
+
+-- FantasyPros publishes STD / HALF / PPR. A league's own format maps onto one of those:
+-- the kiddy league is standard-scoring, so it draws on the STD board. The mapping is in
+-- the seed rather than hardcoded, because a league can change rules without a new board
+-- existing for it.
+settings as (
+
+    select
+        scoring_format,
+        consensus_format
+    from {{ ref('league_settings') }}
+
+),
+
+for_league as (
+
+    select
+        s.scoring_format,
+        b.fp_player_id,
+        b.player_name,
+        b.player_position,
+        b.player_join_key,
+        b.team,
+        b.ecr,
+        b.ecr_stddev,
+        b.ecr_best,
+        b.ecr_worst,
+        b.bye_week,
+        b.board_updated
+    from board as b
+    inner join settings as s on b.scoring_format = s.consensus_format
 
 ),
 
@@ -23,17 +56,18 @@ ranked as (
     select
         *,
         row_number() over (
-            partition by player_join_key, player_position
+            partition by scoring_format, player_join_key, player_position
             order by
                 case when team = 'FA' then 1 else 0 end,
                 ecr
         ) as dedupe_rank
-    from board
+    from for_league
 
 )
 
 select
-    ff_player_id,
+    scoring_format,
+    fp_player_id,
     player_name,
     player_position,
     player_join_key,
@@ -43,6 +77,6 @@ select
     ecr_best,
     ecr_worst,
     bye_week,
-    scrape_date
+    board_updated
 from ranked
 where dedupe_rank = 1

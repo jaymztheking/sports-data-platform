@@ -33,9 +33,9 @@ models:
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
-            combination_of_columns: [player_join_key, player_position]
+            combination_of_columns: [scoring_format, player_join_key, player_position]
     columns:
-      - name: ff_player_id
-        data_tests: [not_null, unique]
+      - name: fp_player_id
+        data_tests: [not_null]
       - name: ecr
         data_tests: [not_null]

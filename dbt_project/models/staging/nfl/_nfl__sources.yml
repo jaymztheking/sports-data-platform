@@ -37,6 +37,15 @@ sources:
           - name: game_id
             description: nflverse game id, e.g. `2025_01_KC_BUF`.
 
+      - name: fp_rankings
+        description: >
+          FantasyPros consensus rankings pulled per scoring format (STD / HALF / PPR).
+          The board behind the marts. Published daily, and unlike the ffverse mirror it
+          carries every format rather than PPR only.
+        freshness:
+          warn_after: {count: 2, period: day}
+          error_after: {count: 7, period: day}
+
       - name: ff_rankings
         description: >
           FantasyPros consensus draft board via ffverse — the market-cost side of
