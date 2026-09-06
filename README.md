@@ -9,6 +9,18 @@ during the season.
 It is intentionally **light**: the value (dbt models + data contracts) comes first,
 and self-hosted infrastructure is added only at the end.
 
+## The draft board
+
+The first product this platform shipped: an interactive
+**[2026 draft board](https://claude.ai/code/artifact/0af37588-b73c-4af6-b417-570f4bd5a907)**
+— 180 draftable players in PPR, ordered by expert consensus rank, showing each player's
+2025 per-game production, floor-to-ceiling range, week-to-week volatility, and how far
+his production rank sits from his draft cost.
+
+Built from `fct_player_season`, whose scoring reproduces nflverse's own PPR figure exactly
+across 23,510 player-weeks. Rookies appear as *no 2025 data* rather than as zero, because
+a fabricated zero would sort them last and they are unmeasured, not bad.
+
 ## Highlights (what this repo demonstrates)
 
 - **dbt at the center** — medallion layering (staging → intermediate → marts) with
