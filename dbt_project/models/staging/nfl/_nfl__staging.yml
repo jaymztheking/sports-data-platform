@@ -1,4 +1,4 @@
-version: 2
+canversion: 2
 
 models:
   - name: stg_nfl__player_stats
