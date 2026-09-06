@@ -47,6 +47,11 @@ line-length = 100
 select = ["E", "F", "I", "N", "W", "UP"]
 ignore = ["N812", "N806"]
 
+[tool.ruff.lint.per-file-ignores]
+# Embeds the draft board's CSS/JS/HTML as string constants. A 100-char Python limit is
+# meaningless inside a stylesheet, and rewrapping would change the emitted markup.
+"scripts/build_draft_board.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.11"
 strict = true

@@ -41,3 +41,6 @@ data/raw/*.parquet
 
 # OS
 .DS_Store
+
+# generated artifact pages (scripts/build_draft_board.py)
+build/
